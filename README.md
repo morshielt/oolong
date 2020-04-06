@@ -3,14 +3,12 @@ __Maria Oparka 394632__
 
 *oolong* to imperatywny język oparty o składnię języka *Latte*.
 
-----------------------
 
 ## Gramatyka
 Gramatyka znajduje się załączonym w pliku `oolong.cf`.
 
 # TODO konflikt
 
-----------------------
 
 ## Tabela cech języka imperatywnego:
 Na 15 punktów
@@ -39,18 +37,13 @@ Na 30 punktów
 
 Razem: 20 + (4 + 2 + 1 + 4) = 31 => __max. 30 punktów__
 
-----------------------
 
 ## Opis języka
 ### Struktura programu
 Program jest listą instrukcji oddzielonych średnikiem.
 
-----------------------
-
 ### Instrukcje
 Instrukcje: pusta, złożona, `if`, `while`, `return`, `break`, `continue` jak w C/Javie. Dodatkowo instrukcjami są przypisanie, definicja funkcji (standardowa składnia jak w C), postinkrementacja, postdekrementacja, wypisanie na standardowe wyjście (instrukcja `print`).
-
-----------------------
 
 ### Typy
 `int`, `bool`, `void`, `string` jak w Javie. Dodatkowo definiuję typ dla funkcji: `<([typ_argumentu]) : typ_zwracany>`
@@ -64,8 +57,6 @@ Domyślne wartości typów przy deklaracji bez inicjalizacji zmiennych:
 
 Deklaracja bez inicjalizacji zmiennej typu funkcyjnego jest __niedozwolona__.
 
-----------------------
-
 ### Wyrażenia
 Takie jak w języku *Latte*, a dodatkowo wyrażenia lambda (funkcje anonimowe) o składni:
 `([typ_i_nazwa_argumentu]) : typ_zwracany -> {[instrukcje]}`
@@ -78,17 +69,11 @@ int x = 5;
 print(add2(x)); // 7
 ```
 
-----------------------
-
 ### Napisy
 Standardowe, można dodawać operatorem `+`.
 
-----------------------
-
 ### Predefiniowane funkcje
 Funkcja `print` wypisująca wyrażenie podstawowego typu (`int`, `bool`, `string`) (__nie `void` ani funkcje anonimowe__)
-
-----------------------
 
 ### Parametry funkcji (przez wartość/referencję)
 Parametry funkcji można przekazywać przez wartość lub przez referencję.
@@ -118,13 +103,6 @@ print(x); // 15
 
 print(mult3(5)); // ERROR - argument musi być zmienną, nie typem podstawowym
 ```
-
-----------------------
-
-### Błędy wykonania
-Obsługiwane są błędy wykonania, np. dzielenie przez 0.
-
-----------------------
 
 ### Przesłanianie zmiennych / zagnieżdżanie funkcji
 Można przesłaniać zmienne w zagnieżdżonych blokach i zagnieżdżać funkcje.
@@ -157,10 +135,7 @@ int f(int y) {
 print(f(1)); // f(1) = 5 * (1 + 2) = 15; 
 ```
 
-----------------------
-
 ### Zwracanie funkcji / przekazywanie jako parametr / funkcje anonimowe / domknięcia
-
 Zwracanie funkcji / domknięcie:
 ```c
 <(int) : int> multByPlus1Function(int multiplier) {
@@ -189,7 +164,8 @@ print(checkCondition(big, 100)); // true
 print(checkCondition((int x) : bool -> { return x == 5; }, 10 )); // false
 ```
 
-----------------------
+### Błędy wykonania
+Obsługiwane są błędy wykonania, np. dzielenie przez 0.
 
 ### Statyczne typowanie
 Interpreter sprawdza zgodność typów przed wykonaniem programu.
