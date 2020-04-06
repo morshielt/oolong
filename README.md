@@ -12,28 +12,28 @@ Gramatyka znajduje się załączonym w pliku `oolong.cf`.
 
 ## Tabela cech języka imperatywnego:
 Na 15 punktów
-+    __01 (trzy typy)__
-+    __02 (literały, arytmetyka, porównania)__
-+    __03 (zmienne, przypisanie)__
-+    __04 (print)__
-+    __05 (while, if)__
-+    __06 (funkcje lub procedury, rekurencja)__
-+    __07 (przez zmienną / przez wartość / in/out)__
-     08 (zmienne read-only i pętla for)
+- [x]    01 (trzy typy)
+- [x]    02 (literały, arytmetyka, porównania)
+- [x]    03 (zmienne, przypisanie)
+- [x]    04 (print)
+- [x]    05 (while, if)
+- [x]    06 (funkcje lub procedury, rekurencja)
+- [x]    07 (przez zmienną / przez wartość / in/out)
+- [ ]    08 (zmienne read-only i pętla for) 
      
 Na 20 punktów
-+    __09 (przesłanianie i statyczne wiązanie)__
-+    __10 (obsługa błędów wykonania)__
-+    __11 (funkcje zwracające wartość)__
+- [x]    09 (przesłanianie i statyczne wiązanie)
+- [x]    10 (obsługa błędów wykonania)
+- [x]    11 (funkcje zwracające wartość)
 
 Na 30 punktów
-+    __12 (4) (statyczne typowanie)__
-+    __13 (2) (funkcje zagnieżdżone ze statycznym wiązaniem)__
-     14 (1) (rekordy/tablice/listy)
-     15 (2) (krotki z przypisaniem)
-+    __16 (1) (break, continue)__
-+    __17 (4) (funkcje wyższego rzędu, anonimowe, domknięcia)__
-     18 (3) (generatory)
+- [x]    12 (4) (statyczne typowanie)
+- [x]    13 (2) (funkcje zagnieżdżone ze statycznym wiązaniem)
+- [ ]    14 (1) (rekordy/tablice/listy)
+- [ ]    15 (2) (krotki z przypisaniem)
+- [x]    16 (1) (break, continue)
+- [x]    17 (4) (funkcje wyższego rzędu, anonimowe, domknięcia)
+- [ ]    18 (3) (generatory)
 
 Razem: 20 + (4 + 2 + 1 + 4) = 31 => __max. 30 punktów__
 
