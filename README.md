@@ -5,9 +5,151 @@ __Maria Oparka 394632__
 
 
 ## Gramatyka
-Gramatyka znajduje się załączonym w pliku `oolong.cf`.
+Gramatyka to nieco zmodyfikowana gramatyka języka *Latte*.
 
-# TODO konflikt
+W gramatyce występuje konflikt:
+wyrażenie `if (cond1) f1(); if (cond2) f2(); else g();` jest parsowane tak, że `else` należy do __drugiego__ `if`.
+
+Gramatyka w notacji EBNF:
+```
+-- programs ------------------------------------------------
+
+entrypoints Program ;
+
+Program.   Program ::= [Stmt] ;
+
+-- statements ----------------------------------------------
+
+Block.     Block ::= "{" [Stmt] "}" ;
+
+separator  Stmt "" ;
+
+Empty.     Stmt ::= ";" ;
+
+BStmt.     Stmt ::= Block ;
+
+Decl.      Stmt ::= Type [Item] ";" ;
+
+DefaultInit.    Item ::= Ident ; -- FUNCTIONS DON'T HAVE DEFAULT, NOT ALLOWED
+
+Init.      Item ::= Ident "=" Expr ;
+
+separator nonempty Item "," ;
+
+Ass.       Stmt ::= Ident "=" Expr  ";" ;
+
+Incr.      Stmt ::= Ident "++"  ";" ;
+
+Decr.      Stmt ::= Ident "--"  ";" ;
+
+Ret.       Stmt ::= "return" Expr ";" ;
+
+VRet.      Stmt ::= "return" ";" ;
+
+Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ;
+
+CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ;
+
+While.     Stmt ::= "while" "(" Expr ")" Stmt ;
+
+Break.      Stmt ::= "break" ";" ;
+
+Continue.      Stmt ::= "continue" ";" ;
+
+Print.      Stmt ::= "print" "(" Expr ")" ";" ; -- ONLY Expr OF TYPE INT, BOOL AND STRING
+
+SExp.      Stmt ::= Expr  ";" ;
+
+FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ;
+
+Arg. 	   Arg ::= Type Ident;
+
+RefArg.	   Arg ::= Type "&" Ident; -- IN FUNCTION DEFINITIONS ONLY (calls must provide a variable, not a primitive)
+
+separator  Arg "," ;
+
+-- Types ---------------------------------------------------
+
+Int.       Type ::= "int" ;
+
+Str.       Type ::= "string" ;
+
+Bool.      Type ::= "bool" ;
+
+Void.      Type ::= "void" ;
+
+Fun.       Type ::= "<""(" [Type] ")" ":" Type ">";
+
+separator  Type "," ;
+
+-- Expressions ---------------------------------------------
+
+ELambda.   Expr6 ::= "(" [Arg] ")" ":" Type "->" Block ;
+
+EVar.      Expr6 ::= Ident ;
+
+ELitInt.   Expr6 ::= Integer ;
+
+ELitTrue.  Expr6 ::= "true" ;
+
+ELitFalse. Expr6 ::= "false" ;
+
+EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
+
+EString.   Expr6 ::= String ;
+
+Neg.       Expr5 ::= "-" Expr6 ;
+
+Not.       Expr5 ::= "!" Expr6 ;
+
+EMul.      Expr4 ::= Expr4 MulOp Expr5 ;
+
+EAdd.      Expr3 ::= Expr3 AddOp Expr4 ;
+
+ERel.      Expr2 ::= Expr2 RelOp Expr3 ;
+
+EAnd.      Expr1 ::= Expr2 "&&" Expr1 ;
+
+EOr.       Expr ::= Expr1 "||" Expr ;
+
+coercions  Expr 6 ;
+
+separator  Expr "," ;
+
+-- operators -----------------------------------------------
+
+Plus.      AddOp ::= "+" ;
+
+Minus.     AddOp ::= "-" ;
+
+Times.     MulOp ::= "*" ;
+
+Div.       MulOp ::= "/" ;
+
+Mod.       MulOp ::= "%" ;
+
+LTH.       RelOp ::= "<" ;
+
+LE.        RelOp ::= "<=" ;
+
+GTH.       RelOp ::= ">" ;
+
+GE.        RelOp ::= ">=" ;
+
+EQU.       RelOp ::= "==" ;
+
+NE.        RelOp ::= "!=" ;
+
+-- comments ------------------------------------------------
+
+comment    "#" ;
+
+comment    "//" ;
+
+comment    "/*" "*/" ;
+
+
+```
 
 
 ## Tabela cech języka imperatywnego:
@@ -70,7 +212,7 @@ print(add2(x)); // 7
 ```
 
 ### Napisy
-Standardowe, można dodawać operatorem `+`.
+Standardowe, można konkatenować operatorem `+`.
 
 ### Predefiniowane funkcje
 Funkcja `print` wypisująca wyrażenie podstawowego typu (`int`, `bool`, `string`) (__nie `void` ani funkcje anonimowe__)
