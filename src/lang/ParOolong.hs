@@ -474,7 +474,7 @@ happyReduction_21 (happy_x_5 `HappyStk`
 	happyRest)
 	 = case happyOut23 happy_x_3 of { happy_var_3 -> 
 	happyIn10
-		 (AbsOolong.Print happy_var_3
+		 (AbsOolong.SPrint happy_var_3
 	) `HappyStk` happyRest}
 
 happyReduce_22 = happySpecReduce_2  6# happyReduction_22

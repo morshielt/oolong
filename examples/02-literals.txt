@@ -1,0 +1,9 @@
+print("x");
+print(5);
+print(-5);
+print(true);
+print(false);
+print(!false);
+
+//print(!"X");
+//print(-"X");

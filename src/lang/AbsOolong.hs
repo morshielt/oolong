@@ -28,7 +28,7 @@ data Stmt
     | While Expr Stmt
     | Break
     | Continue
-    | Print Expr
+    | SPrint Expr
     | SExp Expr
     | FnDef Type Ident [Arg] Block
   deriving (Eq, Ord, Show, Read)

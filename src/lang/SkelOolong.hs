@@ -33,7 +33,7 @@ transStmt x = case x of
   While expr stmt -> failure x
   Break -> failure x
   Continue -> failure x
-  Print expr -> failure x
+  SPrint expr -> failure x
   SExp expr -> failure x
   FnDef type_ ident args block -> failure x
 transItem :: Item -> Result

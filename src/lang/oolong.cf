@@ -1,3 +1,7 @@
+--Najprościej chyba dodać
+--export PATH := $(PATH):/home/students/inf/PUBLIC/MRJP/Stack
+--na początku Makefile.
+
 -- programs ------------------------------------------------
 
 entrypoints Program ;
@@ -10,7 +14,7 @@ Block.     Block ::= "{" [Stmt] "}" ;
 
 separator  Stmt "" ;
 
-Empty.     Stmt ::= ";" ;
+Empty.     Stmt ::= ";" ; --DONE
 
 BStmt.     Stmt ::= Block ;
 
@@ -42,7 +46,7 @@ Break.      Stmt ::= "break" ";" ;
 
 Continue.      Stmt ::= "continue" ";" ;
 
-Print.      Stmt ::= "print" "(" Expr ")" ";" ; -- ONLY Expr OF TYPE INT, BOOL AND STRING
+SPrint.      Stmt ::= "print" "(" Expr ")" ";" ; -- ONLY Expr OF TYPE INT, BOOL AND STRING
 
 SExp.      Stmt ::= Expr  ";" ;
 
@@ -74,19 +78,19 @@ ELambda.   Expr6 ::= "(" [Arg] ")" ":" Type "->" Block ;
 
 EVar.      Expr6 ::= Ident ;
 
-ELitInt.   Expr6 ::= Integer ;
+ELitInt.   Expr6 ::= Integer ;  --DONE
 
-ELitTrue.  Expr6 ::= "true" ;
+ELitTrue.  Expr6 ::= "true" ; --DONE --FIXME: print to lowerCase
 
-ELitFalse. Expr6 ::= "false" ;
+ELitFalse. Expr6 ::= "false" ; --DONE --FIXME: print to lowerCase
 
 EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
 
-EString.   Expr6 ::= String ;
+EString.   Expr6 ::= String ; --DONE
 
-Neg.       Expr5 ::= "-" Expr6 ;
+Neg.       Expr5 ::= "-" Expr6 ; --DONE -- FIXME: int only!
 
-Not.       Expr5 ::= "!" Expr6 ;
+Not.       Expr5 ::= "!" Expr6 ; --DONE -- FIXME: bool only!
 
 EMul.      Expr4 ::= Expr4 MulOp Expr5 ;
 

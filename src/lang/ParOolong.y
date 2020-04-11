@@ -147,7 +147,7 @@ Stmt :: {
   AbsOolong.Continue 
 }
 | 'print' '(' Expr ')' ';' {
-  AbsOolong.Print $3 
+  AbsOolong.SPrint $3 
 }
 | Expr ';' {
   AbsOolong.SExp $1 

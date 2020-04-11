@@ -106,7 +106,7 @@ instance Print Stmt where
     While expr stmt -> prPrec i 0 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 stmt])
     Break -> prPrec i 0 (concatD [doc (showString "break"), doc (showString ";")])
     Continue -> prPrec i 0 (concatD [doc (showString "continue"), doc (showString ";")])
-    Print expr -> prPrec i 0 (concatD [doc (showString "print"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString ";")])
+    SPrint expr -> prPrec i 0 (concatD [doc (showString "print"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString ";")])
     SExp expr -> prPrec i 0 (concatD [prt 0 expr, doc (showString ";")])
     FnDef type_ id args block -> prPrec i 0 (concatD [prt 0 type_, prt 0 id, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
   prtList _ [] = (concatD [])
