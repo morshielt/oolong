@@ -5,5 +5,5 @@ import           PrintOolong
 import           ErrM
 
 
-typecheck :: Program -> Err ()
+-- typecheck :: Program -> Err ()
 typecheck p = return ()

@@ -10,3 +10,9 @@ print(5<5);
 print(5<=5);
 print(5==5);
 print(5!=5);
+
+
+print(true&&false);
+print(true||false);
+
+print(!"x");

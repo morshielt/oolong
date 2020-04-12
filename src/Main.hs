@@ -1,6 +1,9 @@
 import           System.Environment             ( getArgs )
 import           System.Exit                    ( exitFailure )
-
+import           System.IO                      ( stderr
+                                                , hPutStrLn
+                                                )
+import           Control.Monad.Except
 import           Control.Monad                  ( when )
 
 import           ParOolong
@@ -38,7 +41,13 @@ check s = case pProgram (myLexer s) of
                 putStrLn "TYPE ERROR"
                 putStrLn err
                 exitFailure
-            Ok _ -> interpret tree
+            Ok _ -> do
+                res <- runExceptT $ runInterpreter tree
+                case res of
+                    Left e -> do
+                        hPutStrLn stderr $ "Runtime exception: " ++ e
+                        exitFailure
+                    Right _ -> return ()
 
 main :: IO ()
 main = do

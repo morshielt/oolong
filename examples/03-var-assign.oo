@@ -1,0 +1,17 @@
+int p,r;
+print(p);
+print(r);
+
+bool f;
+print(f);
+
+string e;
+print(e);
+
+string x = "mikrofalowka", z, f="fujka";
+print(x);
+print(z);
+print(f);
+
+int i = "szynka";
+print(i);

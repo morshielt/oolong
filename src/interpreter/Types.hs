@@ -6,6 +6,10 @@ import           Control.Monad.Reader
 import           Control.Monad.State
 import           Control.Monad.Except
 
+import AbsOolong 
+
+
+
 type Var = String
 type Loc = Integer
 
@@ -13,12 +17,16 @@ type VarToLoc = M.Map Var Loc -- ENV
 
 -- type Fun = 
 
+valToType :: Val -> Type
+valToType (VInt    _) = Int
+valToType (VBool   _) = Bool
+valToType (VString _) = Str
+valToType VVoid       = Void
+valToType _ = error "valToType unimplemented yet"
+
 data Val = VInt Integer | VBool Bool | VString String | VVoid deriving (Show)  -- | VFun Fun 
 
 type LocToVal = M.Map Loc Val -- STORE
-
--- data RuntimeException = DivisionByZeroException | ModulusByZeroException | NoReturnException deriving Show
-data RuntimeException = DivisionByZeroException | ModulusByZeroException deriving Show
 
 type ReturnResult = Maybe Val
 
@@ -28,21 +36,25 @@ data IMState = IMState
   } deriving Show
 
 
-type IMon a = ReaderT VarToLoc (StateT IMState (ExceptT RuntimeException IO)) a
+type IMon a = ReaderT VarToLoc (StateT IMState (ExceptT String IO)) a
+
+-- type IExcept = ExceptT String IO
+-- type IState = StateT Store IExcept
+-- type Interpreter = ReaderT Env IState
 
 
-embedded :: ReaderT VarToLoc (StateT IMState (ExceptT RuntimeException IO)) Int
+embedded :: ReaderT VarToLoc (StateT IMState (ExceptT String IO)) Int
 embedded = do
-    -- throwError DivisionByZeroException -- Left DivisionByZeroException
+    throwError "DivisionByZeroException" -- Left DivisionByZeroException
     return 1 -- Right (1,IMState {locToVal = fromList [], freeLoc = 0})
 
-readerUnwrap :: VarToLoc -> (StateT IMState (ExceptT RuntimeException IO)) Int
+readerUnwrap :: VarToLoc -> (StateT IMState (ExceptT String IO)) Int
 readerUnwrap = runReaderT embedded
 
-stateUnwrap :: IMState -> ExceptT RuntimeException IO (Int, IMState)
+stateUnwrap :: IMState -> ExceptT String IO (Int, IMState)
 stateUnwrap = runStateT $ readerUnwrap M.empty
 
-exceptUnwrap :: IO (Either RuntimeException (Int, IMState))
+exceptUnwrap :: IO (Either String (Int, IMState))
 exceptUnwrap = runExceptT $ stateUnwrap $ IMState M.empty 0
 
 
