@@ -20,6 +20,8 @@ executable interp
     PrintOolong
     SkelOolong
     Types
+    Utils
+    Expressions
     Interpreter
     TypeCheck
   main-is:             Main.hs

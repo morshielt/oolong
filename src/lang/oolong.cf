@@ -6,27 +6,27 @@
 
 entrypoints Program ;
 
-Program.   Program ::= [Stmt] ;
+Program.   Program ::= [Stmt] ;  --DONE
 
 -- statements ----------------------------------------------
 
-Block.     Block ::= "{" [Stmt] "}" ;
+Block.     Block ::= "{" [Stmt] "}" ;  --DONE
 
 separator  Stmt "" ;
 
 Empty.     Stmt ::= ";" ; --DONE
 
-BStmt.     Stmt ::= Block ;
+BStmt.     Stmt ::= Block ;  --DONE
 
-Decl.      Stmt ::= Type [Item] ";" ; -- ZMIENIA ENV GNIDA JEDNA
+Decl.      Stmt ::= Type [Item] ";" ; -- ZMIENIA ENV GNIDA JEDNA  --DONE
 
-DefaultInit.    Item ::= Ident ; -- FUNCTIONS DON'T HAVE DEFAULT, NOT ALLOWED -- ZMIENIA ENV GNIDA JEDNA
+DefaultInit.    Item ::= Ident ; -- TODO: FUNCTIONS DON'T HAVE DEFAULT, NOT ALLOWED -- ZMIENIA ENV GNIDA JEDNA  --DONEsome
 
-Init.      Item ::= Ident "=" Expr ; -- ZMIENIA ENV GNIDA JEDNA
+Init.      Item ::= Ident "=" Expr ; -- ZMIENIA ENV GNIDA JEDNA  --DONE
 
 separator nonempty Item "," ;
 
-Ass.       Stmt ::= Ident "=" Expr  ";" ;
+Ass.       Stmt ::= Ident "=" Expr  ";" ;  --DONE
 
 Incr.      Stmt ::= Ident "++"  ";" ;
 
@@ -40,13 +40,13 @@ Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ;
 
 CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ;
 
-While.     Stmt ::= "while" "(" Expr ")" Stmt ;
+While.     Stmt ::= "while" "(" Expr ")" Stmt ;  --DONE
 
 Break.      Stmt ::= "break" ";" ;
 
 Continue.      Stmt ::= "continue" ";" ;
 
-SPrint.      Stmt ::= "print" "(" Expr ")" ";" ; -- ONLY Expr OF TYPE INT, BOOL AND STRING 
+SPrint.      Stmt ::= "print" "(" Expr ")" ";" ; -- ONLY Expr OF TYPE INT, BOOL AND STRING  --DONE kinda chyba? 
 -- zrobienie 1arg funkcji o nazwie print jest głupie XD nigdy jej nie wywoła
 
 SExp.      Stmt ::= Expr  ";" ;
@@ -61,13 +61,13 @@ separator  Arg "," ;
 
 -- Types ---------------------------------------------------
 
-Int.       Type ::= "int" ;
+Int.       Type ::= "int" ; --DONE
 
-Str.       Type ::= "string" ;
+Str.       Type ::= "string" ; --DONE
 
-Bool.      Type ::= "bool" ;
+Bool.      Type ::= "bool" ; --DONE
 
-Void.      Type ::= "void" ;
+Void.      Type ::= "void" ; --DONE
 
 Fun.       Type ::= "<""(" [Type] ")" ":" Type ">";
 
@@ -77,7 +77,7 @@ separator  Type "," ;
 
 ELambda.   Expr6 ::= "(" [Arg] ")" ":" Type "->" Block ;
 
-EVar.      Expr6 ::= Ident ;
+EVar.      Expr6 ::= Ident ;--DONE
 
 ELitInt.   Expr6 ::= Integer ; --DONE
 
@@ -108,7 +108,7 @@ coercions  Expr 6 ;
 separator  Expr "," ;
 
 -- operators -----------------------------------------------
-
+--DONE
 Plus.      AddOp ::= "+" ;
 
 Minus.     AddOp ::= "-" ;
@@ -132,7 +132,7 @@ EQU.       RelOp ::= "==" ;
 NE.        RelOp ::= "!=" ;
 
 -- comments ------------------------------------------------
-
+--DONE
 comment    "#" ;
 
 comment    "//" ;

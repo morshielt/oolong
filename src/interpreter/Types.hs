@@ -28,7 +28,7 @@ data Val = VInt Integer | VBool Bool | VString String | VVoid deriving (Show)  -
 
 type LocToVal = M.Map Loc Val -- STORE
 
-type ReturnResult = Maybe Val
+type ReturnVal = Maybe Val
 
 data IMState = IMState
   { locToVal :: LocToVal
@@ -70,7 +70,7 @@ exceptUnwrap = runExceptT $ stateUnwrap $ IMState M.empty 0
 
 
 -- runInterpreter prog =
---     runExceptT $ runStateT (runReaderT (interpretMany prog) M.empty) $ IMState
+--     runExceptT $ runStateT (runReaderT (execStmtsM prog) M.empty) $ IMState
 --         M.empty
 --         0
 

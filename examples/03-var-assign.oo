@@ -13,5 +13,9 @@ print(x);
 print(z);
 print(f);
 
+r = 11111101;
+print(r);
+
+//void l;
 int i = "szynka";
 print(i);

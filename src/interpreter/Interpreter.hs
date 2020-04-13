@@ -4,178 +4,192 @@ module Interpreter where
 import           AbsOolong
 
 import           Types
+import           Utils
+import           Expressions
 
 import           Data.Map                      as M
-import           Data.Maybe
 
 import           Control.Monad.Reader
 import           Control.Monad.State
-import           Control.Monad.Except
 import           Control.Monad.Trans.Except
 
-throwM :: String -> IMon a
-throwM = lift . lift . throwE
+-- TODO: nigdzie się jeszcze nie sprawdza, 
+-- czy w danym scope nie ma już czasem zmiennej o takiej nazwie!
 
-alloc :: Val -> IMon Loc
-alloc val = do
-    modify
-        (\st ->
-            let mod = M.insert (freeLoc st + 1) val (locToVal st)
-            in  st { freeLoc = freeLoc st + 1, locToVal = mod }
-        )
-    gets freeLoc
-
-continueInCurrentEnv :: IMon (VarToLoc, ReturnResult)
+continueInCurrentEnv :: IMon (VarToLoc, ReturnVal)
 continueInCurrentEnv = do
     env <- ask
     return (env, Nothing)
 
-evalExprM :: Expr -> IMon ReturnResult
-evalExprM (EVar (Ident var)) = do  -- TODO: JAK NOT FOUND TO DAJE NOTHING TO JAKOŚ MA SIĘ WYJEBYWAĆ
-    env   <- ask
-    state <- gets locToVal
-    -- res   <- getVal env state
-    case getVal env state of
-        Nothing -> throwM "evalExprM: Location's value not found!!!"
-        _       -> return $ getVal env state
-  where
-    getVal :: VarToLoc -> LocToVal -> Maybe Val
-    getVal env state = case M.lookup var env of
-        Nothing -> error "evalExprM:getVal: Variable location not found!!!"
-        _       -> do
-            loc <- M.lookup var env
-            -- error $ show loc
-            M.lookup loc state
-
-evalExprM (EString s) = (return . Just . VString) s
-evalExprM (ELitInt n) = (return . Just . VInt) n
-evalExprM ELitTrue    = (return . Just . VBool) True
-evalExprM ELitFalse   = (return . Just . VBool) False
-evalExprM (Neg e)     = do
-    e' <- evalExprM e
-    case e' of
-        (Just e'') -> case e'' of
-            (VInt n) -> (return . Just . VInt . negate) n
-            _        -> throwM "TODO Inappropriate type for integer negation"
-        Nothing -> throwM "TODO Nothing to integer negate"
-
-evalExprM (Not e) = do
-    e' <- evalExprM e
-    case e' of
-        (Just e'') -> case e'' of
-            (VBool b) -> (return . Just . VBool . not) b
-            _         -> throwM "TODO Inappropriate type for bool negation"
-        Nothing -> throwM "TODO Nothing to bool negate"
+valToString :: ReturnVal -> String
+valToString res = case res of
+    (Just val) -> case val of
+        (VInt    x) -> show x
+        (VBool   b) -> show b
+        (VString s) -> s
+        _           -> error "ERROR valToString"
+    Nothing -> error "ERROR Nothing valToString"
 
 
-evalExprM (EMul e symbol f) = do
-    e' <- evalExprM e
-    f' <- evalExprM f
-    return $ liftM2 (performMulOp symbol) e' f'
-
-evalExprM (EAdd e symbol f) = do
-    e' <- evalExprM e
-    f' <- evalExprM f
-    return $ liftM2 (performAddOp symbol) e' f'
-
-evalExprM (ERel e symbol f) = do
-    e' <- evalExprM e
-    f' <- evalExprM f
-    return $ liftM2 (performRelOp symbol) e' f'
-
-evalExprM (EAnd e f) = do
-    e' <- evalExprM e
-    f' <- evalExprM f
-    return $ liftM2 (performAndOr (&&)) e' f'
-
-evalExprM (EOr e f) = do
-    e' <- evalExprM e
-    f' <- evalExprM f
-    return $ liftM2 (performAndOr (||)) e' f'
-
-performAndOr :: (Bool -> Bool -> Bool) -> Val -> Val -> Val
-performAndOr op (VBool a) (VBool b) = VBool $ op a b
-performAndOr _  _         _         = error "performAndOr"
-
-performMulOp :: MulOp -> Val -> Val -> Val
-performMulOp op (VInt a) (VInt b) = VInt $ mulOp op a b
-performMulOp _  _        _        = error "performMulOp"
-
-mulOp :: MulOp -> Integer -> Integer -> Integer
-mulOp Times = (*)
-mulOp Div   = div
-mulOp Mod   = mod
-
-performAddOp :: AddOp -> Val -> Val -> Val
-performAddOp op (VInt a) (VInt b) = VInt $ addOp op a b
-performAddOp _  _        _        = error "performAddOp"
-
-addOp :: AddOp -> Integer -> Integer -> Integer
-addOp Plus  = (+)
-addOp Minus = (-)
-
-performRelOp :: RelOp -> Val -> Val -> Val
-performRelOp op (VInt a) (VInt b) = VBool $ relOp op a b
-performRelOp _  _        _        = error "performRelOp"
-
-relOp :: RelOp -> Integer -> Integer -> Bool
-relOp LTH = (<)
-relOp LE  = (<=)
-relOp GTH = (>)
-relOp GE  = (>=)
-relOp EQU = (==)
-relOp NE  = (/=)
-
--- performArithmOp :: ArithmOp o => o -> Val -> Val -> Val
--- performArithmOp o (VInt a) (VInt b) = VInt $ relOp o a b
--- performArithmOp _ _    _    = error "TODO Invalid performArithmOp"
-
--- performRelationOp :: RelationOp o => o -> Val -> Val -> Val
--- performRelationOp o (VInt a) (VInt b) = VBool $ relOp o a b
--- performRelationOp _ _    _    = error "TODO Invalid performRelationOp"
-
-
--- performArithmOp :: Op -> Val -> Val -> Val
--- performArithmOp relOp a b = undefined
--- performArithmOp _ _ _ = error "TODO Invalid operation"
-
-
-execStmtM :: Stmt -> IMon (VarToLoc, ReturnResult)
+execStmtM :: Stmt -> IMon (VarToLoc, ReturnVal)
 execStmtM Empty      = continueInCurrentEnv
 
 execStmtM (SPrint e) = do
     e' <- evalExprM e
-    liftIO $ putStrLn $ valToString e'
-    continueInCurrentEnv
+    case e' of
+        (Just val) -> if valToType val `notElem` [Int, Bool, Str]
+            then throwM $ "print: invalid type of expression: " ++ show
+                (valToType val)
+            else do
+                liftIO $ putStrLn $ case val of
+                    (VInt    x) -> show x
+                    (VBool   b) -> show b
+                    (VString s) -> s
+                continueInCurrentEnv
+        Nothing -> throwM $ "print: invalid expression " ++ show e
 
-execStmtM (Decl _ []) = continueInCurrentEnv
-execStmtM (Decl t (DefaultInit (Ident var) : items)) = --TODO: kiedyś odrekurencyjnić? XD
-    if t `notElem` [Int, Bool, Str]
-        then throwM $ "Illegal type for default declaration: " ++ show t
-        else do
-            loc <- alloc $ case t of
-                Int  -> VInt 0
-                Bool -> VBool False
-                Str  -> VString ""
-            env <- ask -- TODO: tu się powtarza to co niżej~
-            let env' = M.insert var loc env
-            local (const env') (execStmtM (Decl t items))
+execStmtM (Decl _ []) = throwM "Miracle, that should never get through parsing phase."
+execStmtM (Decl Void _) =
+    throwM $ "Illegal type for variable declaration: " ++ show Void
+execStmtM (Decl (Fun _ _) (DefaultInit _ : _)) =
+    throwM "Function declaration without initialisation is forbidden."
 
-execStmtM (Decl t (Init (Ident var) e : items)) = if t == Void
-    then throwM $ "Illegal type for variable declaration: " ++ show Void
-    else do
+execStmtM (Decl t ds) = do
+    ds' <- mapM declToPair ds
+    let decls = M.fromList ds'
+    env <- ask
+    let env' = M.unionWith (curry snd) env decls -- TODO: musi być snd? 
+    return (env', Nothing)
+    -- w sensie teoretycznie chyba i tak nie powinno być zmiennych z tą samą nazwą 
+    -- w tym samym bloku, ale wydaje mi się, że to się przyda to nadpisywania w kolejnych blokach,
+    -- nie wiem
+  where
+    declToPair :: Item -> IMon (Var, Loc)
+    declToPair d = do
+        (var, val) <- unpackDeclaration d
+        loc        <- alloc val
+        return (var, loc)
+    unpackDeclaration :: Item -> IMon (Var, Val)
+    unpackDeclaration (DefaultInit (Ident var)) =
+        (return . (,) var) $ case t of
+            Int  -> VInt 0
+            Bool -> VBool False
+            Str  -> VString ""
+    unpackDeclaration (Init (Ident var) e) = do
+        val <- getValAndCheckType t e
+        return (var, val)
+    getValAndCheckType :: Type -> Expr -> IMon Val
+    getValAndCheckType t e = do
         e' <- evalExprM e
         case e' of
-            (Just val) -> 
-              if t == valToType val then do
-                loc <- alloc val
-                env <- ask
-                let env' = M.insert var loc env
-                local (const env') (execStmtM (Decl t items))
-              else throwM $ "Expression \"" ++ show e ++ "\" doesn't match type: " ++ show t
-            Nothing -> throwM $ "Illegal expression for variable declaration: " ++ show e
+            (Just val) -> if t == valToType val
+                then return val
+                else
+                    throwM
+                    $  "Expression \""
+                    ++ show e
+                    ++ "\" doesn't match type: "
+                    ++ show t
+            Nothing ->
+                throwM
+                    $  "Illegal expression for variable declaration: "
+                    ++ show e
 
-execStmtM _ = undefined
+-- execStmtM (Decl _ []) = continueInCurrentEnv
+-- execStmtM (Decl t (d : ds)) = do
+--     (var, val) <- unpackDeclaration d
+--     loc        <- alloc val
+--     env        <- ask -- TODO: tu się powtarza to co niżej~
+--     let env' = M.insert var loc env
+--     local (const env') (execStmtM (Decl t ds))
+--   where
+--     unpackDeclaration :: Item -> IMon (Var, Val)
+--     unpackDeclaration (DefaultInit (Ident var)) = (return . (,) var) $ case t of
+--         Int  -> VInt 0
+--         Bool -> VBool False
+--         Str  -> VString ""
+--     unpackDeclaration (Init (Ident var) e) = do
+--         val <- getValAndCheckType t e
+--         return (var, val)
+
+--     getValAndCheckType :: Type -> Expr -> IMon Val
+--     getValAndCheckType t e = do
+--         e' <- evalExprM e
+--         case e' of
+--             (Just val) -> if t == valToType val
+--                 then return val
+--                 else
+--                     throwM
+--                     $  "Expression \""
+--                     ++ show e
+--                     ++ "\" doesn't match type: "
+--                     ++ show t
+--             Nothing ->
+--                 throwM $ "Illegal expression for variable declaration: " ++ show e
+
+
+
+execStmtM (Ass (Ident var) e) = do
+    e' <- evalExprM e
+    case e' of
+        (Just val) -> do
+            changeVal var val
+            continueInCurrentEnv
+        Nothing ->
+            throwM $ "Illegal expression for variable assignment: " ++ show e
+
+        -- let env' = M.insert var loc env
+        -- local (const env') (execStmtM (Decl t items))
+
+
+execStmtM (While e s) = execCondAndActM e continueWhile continueInCurrentEnv
+  where
+    continueWhile = do
+        execStmtM s
+        execStmtM (While e s)
+
+execStmtM (Cond e s) = execCondAndActM e (execStmtM s) continueInCurrentEnv
+
+execStmtM (CondElse e s1 s2) = execCondAndActM e (execStmtM s1) (execStmtM s2)
+
+execStmtM (BStmt (Block ss)) = execStmtsM ss
+
+execStmtM _                  = error "Not implemented yet or error xD"
+
+execCondAndActM
+    :: Expr
+    -> IMon (VarToLoc, ReturnVal)
+    -> IMon (VarToLoc, ReturnVal)
+    -> IMon (VarToLoc, ReturnVal)
+execCondAndActM e tFun fFun = do
+    b <- evalExprM e
+    case b of
+        (Just cond) -> case cond of
+            (VBool True ) -> tFun
+            (VBool False) -> fFun
+            _ ->
+                throwM
+                    $  "Illegal expression for while loop condition: " -- TODO: nazwa while jest malo uniwersAlna xD
+                    ++ show e
+        Nothing ->
+            throwM $ "Invalid expression for while loop condition: " ++ show e
+
+
+execStmtsM :: [Stmt] -> IMon (VarToLoc, ReturnVal)
+execStmtsM []       = continueInCurrentEnv
+execStmtsM (s : xs) = do
+    (possiblyUpdatedEnv, ret) <- execStmtM s
+    case ret of
+        Nothing ->
+            -- liftIO $ putStrLn "NOTHINGrETURNED~  "
+            local (const possiblyUpdatedEnv) (execStmtsM xs) -- always run in 'new' env, which is only sometimes changed
+        _ -> return (possiblyUpdatedEnv, ret) -- (?) function return (?)
+
+runInterpreter (Program prog) = runStateT
+    (runReaderT (execStmtsM prog) M.empty)
+    initialState
+    where initialState = IMState M.empty 0
+
 
 -- itemsToVarVal :: Type -> [Item] -> IMon ([(Var, Val)])
 -- itemsToVarVal t = return Prelude.map (toVarVal t)
@@ -193,14 +207,7 @@ execStmtM _ = undefined
 -- Decl Bool [Init (Ident "j") (ELitInt 1)]
 -- data Type = Int | Str | Bool | Void | Fun [Type] Type
 
-valToString :: ReturnResult -> String
-valToString res = case res of
-    (Just val) -> case val of
-        (VInt    x) -> show x
-        (VBool   b) -> show b
-        (VString s) -> s
-        _           -> error "ERROR valToString"
-    Nothing -> error "ERROR Nothing valToString"
+
 -- valToString (VInt  x) = show x
 -- valToString (VBool   b) = show b
 -- valToString (VString s) = s
@@ -221,26 +228,5 @@ valToString res = case res of
 --   let e' = evalExprM e env
 --   modify (Map.insert x e')
 
--- TODO: to jest jakoś chujowo -- TODO: jednak jest kul
-interpretMany :: [Stmt] -> IMon (VarToLoc, ReturnResult)
-interpretMany []       = continueInCurrentEnv
-interpretMany (s : xs) = do
-    (possiblyUpdatedEnv, ret) <- execStmtM s
-    case ret of
-        Nothing -> 
-            -- liftIO $ putStrLn "NOTHINGrETURNED~  "
-            local (const possiblyUpdatedEnv) (interpretMany xs) -- always run in 'new' env, which is only sometimes changed
-        _ -> return (possiblyUpdatedEnv, ret) -- (?) function return (?)
+-- TODO: to jest jakoś chujowo -- TODO: jednak jest kul -- XD
 
-runInterpreter (Program prog) = runStateT
-    (runReaderT (interpretMany prog) M.empty)
-    initialState
-    where initialState = IMState M.empty 0
-
--- interpret :: Program -> IO ()
--- interpret (Program p) = do
---   res <- runInterpreter p
---   case res of
---     (Left err) -> error "TODO"
---     _      -> return ()
--- interpret p = putStrLn "no interpreter yet"
