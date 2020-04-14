@@ -28,9 +28,9 @@ separator nonempty Item "," ;
 
 Ass.       Stmt ::= Ident "=" Expr  ";" ;  --DONE
 
-Incr.      Stmt ::= Ident "++"  ";" ;
+Incr.      Stmt ::= Ident "++"  ";" ;--DONE
 
-Decr.      Stmt ::= Ident "--"  ";" ;
+Decr.      Stmt ::= Ident "--"  ";" ;--DONE
 
 Ret.       Stmt ::= "return" Expr ";" ; --DONE
 

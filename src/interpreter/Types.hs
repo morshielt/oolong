@@ -1,6 +1,7 @@
 module Types where
 
 import           Data.Map                      as M
+                                         hiding ( map )
 
 import           Control.Monad.Reader
 import           Control.Monad.State
@@ -15,17 +16,25 @@ type Loc = Integer
 
 type VarToLoc = M.Map Var Loc -- ENV
 
--- type Fun = 
+type Ref = Bool
 
 valToType :: Val -> Type
-valToType (VInt    _)         = Int
-valToType (VBool   _)         = Bool
-valToType (VString _)         = Str
-valToType VVoid               = Void
-valToType (VFun args ret _ _) = Fun (Prelude.map fst args) ret
--- valToType _           = error "valToType unimplemented yet"
-                                                                --   args           ret   env(closure)   body
-data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [(Type, Var)]  Type  VarToLoc       [Stmt] deriving (Show)
+valToType (VInt    _)       = Int
+valToType (VBool   _)       = Bool
+valToType (VString _)       = Str
+valToType VVoid             = Void
+valToType (VFun args ret _ _) = Fun (map fst args) ret
+-- valToType _       = error "valToType unimplemented yet"
+                                --   args       ret   env(closure)   body
+data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [(Type, Var)]  Type  VarToLoc     [Stmt] -- deriving (Show)
+-- data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Type] Type ([Val] -> IMon(VarToLoc, ReturnVal))
+
+instance Show Val where
+    show v = case v of
+        VInt    i     -> show i
+        VBool   True  -> "true"
+        VBool   False -> "false"
+        VString s     -> s
 
 type LocToVal = M.Map Loc Val -- STORE
 
@@ -61,25 +70,25 @@ exceptUnwrap = runExceptT $ stateUnwrap $ IMState M.empty 0
 
 -- newtype IMon a = IMon (ReaderT VarToLoc (StateT IMState (ExceptT RuntimeException IO)) a)
 --   deriving ( Functor
---            , Applicative
---            , Monad
---            , MonadReader VarToLoc
---            , MonadState IMState
---            , MonadError RuntimeException
---            , MonadIO
---            )
+--      , Applicative
+--      , Monad
+--      , MonadReader VarToLoc
+--      , MonadState IMState
+--      , MonadError RuntimeException
+--      , MonadIO
+--      )
 
 
 -- runInterpreter prog =
---     runExceptT $ runStateT (runReaderT (execStmtsM prog) M.empty) $ IMState
---         M.empty
---         0
+--   runExceptT $ runStateT (runReaderT (execStmtsM prog) M.empty) $ IMState
+--     M.empty
+--     0
 
 -- runMyMonad :: VarToLoc -> IMState -> IMon a -> IO (Either RuntimeException a)
 -- runMyMonad VarToLoc state (IMon m) = runExceptT s
 --   where
---     r = runReaderT m VarToLoc
---     s = evalStateT r state
+--   r = runReaderT m VarToLoc
+--   s = evalStateT r state
 
 
 -- initialVarToLocironment :: VarToLoc

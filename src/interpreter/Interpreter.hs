@@ -16,6 +16,16 @@ import           Control.Monad.Trans.Except
 
 
 ------------------EXPR---------------------------------------------------------
+
+getVarValFromArgsAndExpr args es = do
+    let tve = zip3 (map fst args) (map snd args) es
+    mapM
+        (\(t, var, exp) -> do
+            val <- getValAndCheckType t exp
+            return (var, val)
+        )
+        tve
+        
 evalExprM :: Expr -> IMon ReturnVal
 evalExprM (EVar (Ident var)    ) = (return . Just) =<< readVal var
 
@@ -26,6 +36,7 @@ evalExprM (EApp (Ident name) es) = do
     varLocs                   <- mapM
         (\(var, val) -> do
             loc <- alloc val
+            putNewVal loc val
             return (var, loc)
         )
         varVals
@@ -35,10 +46,8 @@ evalExprM (EApp (Ident name) es) = do
     (_, retVal) <- local (const env') (execStmtsM body)
 
     case retVal of
-        Nothing -> if ret == Void -- TODO czy trzeba pisać return dla Void?
-            then return Nothing
-            else
-                throwM
+        Nothing ->
+            throwM
                 $  name
                 ++ ": Invalid return type. Expected: "
                 ++ show ret
@@ -53,16 +62,7 @@ evalExprM (EApp (Ident name) es) = do
                 ++ show ret
                 ++ " Got: "
                 ++ show (valToType val)
-  where
-    getVarValFromArgsAndExpr args es = do
-        let tve = zip3 (map fst args) (map snd args) es
-        mapM
-            (\(t, var, exp) -> do
-                val <- getValAndCheckType t exp
-                return (var, val)
-            )
-            tve
-
+--   where
 evalExprM (EString s) = (return . Just . VString) s
 evalExprM (ELitInt n) = (return . Just . VInt) n
 evalExprM ELitTrue    = (return . Just . VBool) True
@@ -229,18 +229,11 @@ execStmtM (Ret e) = do
 
 execStmtM (FnDef ret (Ident name) args (Block ss)) = do
     env <- ask
-    let
-        val = VFun (Prelude.map (\(Arg t (Ident var)) -> (t, var)) args)
-                   ret
-                   env
-                   ss -- TODO:FIXME:RECURSION DOESN'T WORK!
+    let val = VFun (map (\(Arg t (Ident var)) -> (t, var)) args) ret env ss -- TODO: FIXME:RECURSION DOESN'T WORK!
     loc <- alloc val
+    putNewVal loc val
     let env' = M.insert name loc env
-    let
-        val' = VFun (Prelude.map (\(Arg t (Ident var)) -> (t, var)) args)
-                    ret
-                    env'
-                    ss
+    let val' = VFun (map (\(Arg t (Ident var)) -> (t, var)) args) ret env' ss
     putVal loc val' --Maybe it'll work now, maybe
     return (env', Nothing)
 
@@ -264,6 +257,7 @@ execStmtM (Decl t ds) = do
     declToPair d = do
         (var, val) <- unpackDeclaration d
         loc        <- alloc val -- NIGDZIE NIE SPRAWDZAM CZY NIE MA JUŻ ZMIENNEJ Z TYM ID, NIEDOBRZE NO
+        putNewVal loc val
         return (var, loc)       -- TODO: ew. bez typechecka to: dodać zmienną z nr-em scope i mapę var->nr_scope "w jakim scope ostatnie zadekralowaną tą zmienną"
     unpackDeclaration :: Item -> IMon (Var, Val)
     unpackDeclaration (DefaultInit (Ident var)) =
@@ -274,6 +268,23 @@ execStmtM (Decl t ds) = do
     unpackDeclaration (Init (Ident var) e) = do
         val <- getValAndCheckType t e
         return (var, val)
+
+execStmtM (Incr (Ident var)) = do
+    val <- readVal var
+    case val of
+        (VInt n) -> do
+            changeVal var (VInt (n + 1))
+            continueInCurrentEnv
+        _ -> throwM "Illegal type to increment."
+
+-- TODO: 90% takie jak Incr
+execStmtM (Decr (Ident var)) = do
+    val <- readVal var
+    case val of
+        (VInt n) -> do
+            changeVal var (VInt (n - 1))
+            continueInCurrentEnv
+        _ -> throwM "Illegal type to increment."
 
 execStmtM (Ass (Ident var) e) = do
     e' <- evalExprM e

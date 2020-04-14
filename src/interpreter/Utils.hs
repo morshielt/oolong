@@ -13,11 +13,7 @@ throwM = lift . lift . throwE
 
 alloc :: Val -> IMon Loc
 alloc val = do
-    modify
-        (\st ->
-            let mod = M.insert (freeLoc st + 1) val (locToVal st)
-            in  st { freeLoc = freeLoc st + 1, locToVal = mod }
-        )
+    modify (\st -> st { freeLoc = freeLoc st + 1 })
     gets freeLoc
 
 getLoc :: Var -> IMon Loc
@@ -38,17 +34,20 @@ getVal loc = do
             throwM $ "getVal: Location's " ++ show loc ++ "value not found!!!"
         (Just val') -> return val'
 
+
+putNewVal :: Loc -> Val -> IMon ()
+putNewVal loc val = do
+    modify
+        (\st ->
+            let mod = M.insert loc val (locToVal st) in st { locToVal = mod }
+        )
+    return ()
+
 putVal :: Loc -> Val -> IMon ()
 putVal loc val = do
     old <- getVal loc
     if valToType old == valToType val
-        then do
-            modify
-                (\st ->
-                    let mod = M.insert loc val (locToVal st)
-                    in  st { locToVal = mod }
-                )
-            return ()
+        then putNewVal loc val
         else
             throwM
             $  "putVal: Expected type: "
