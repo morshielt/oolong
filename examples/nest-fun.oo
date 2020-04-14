@@ -1,0 +1,9 @@
+int x = 5;
+int f(int y) {
+    int add2(int z) {
+        return z + 2;
+    }
+    return x * add2(y);
+}
+
+print(f(1)); // f(1) = 5 * (1 + 2) = 15; 

@@ -32,13 +32,13 @@ Incr.      Stmt ::= Ident "++"  ";" ;
 
 Decr.      Stmt ::= Ident "--"  ";" ;
 
-Ret.       Stmt ::= "return" Expr ";" ;
+Ret.       Stmt ::= "return" Expr ";" ; --DONE
 
-VRet.      Stmt ::= "return" ";" ;
+VRet.      Stmt ::= "return" ";" ; --DONE
 
-Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ;
+Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ; --DONE
 
-CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ;
+CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ; --DONE
 
 While.     Stmt ::= "while" "(" Expr ")" Stmt ;  --DONE
 
@@ -49,11 +49,11 @@ Continue.      Stmt ::= "continue" ";" ;
 SPrint.      Stmt ::= "print" "(" Expr ")" ";" ; -- ONLY Expr OF TYPE INT, BOOL AND STRING  --DONE kinda chyba? 
 -- zrobienie 1arg funkcji o nazwie print jest głupie XD nigdy jej nie wywoła
 
-SExp.      Stmt ::= Expr  ";" ;
+SExp.      Stmt ::= Expr  ";" ; --DONE
 
-FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ; -- ZMIENIA ENV GNIDA JEDNA
+FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ; -- ZMIENIA ENV GNIDA JEDNA --DONE
 
-Arg. 	   Arg ::= Type Ident;
+Arg. 	   Arg ::= Type Ident; --DONE
 
 RefArg.	   Arg ::= Type "&" Ident; -- IN FUNCTION DEFINITIONS ONLY (calls must provide a variable, not a primitive)
 
@@ -69,7 +69,7 @@ Bool.      Type ::= "bool" ; --DONE
 
 Void.      Type ::= "void" ; --DONE
 
-Fun.       Type ::= "<""(" [Type] ")" ":" Type ">";
+Fun.       Type ::= "<""(" [Type] ")" ":" Type ">"; --DONE
 
 separator  Type "," ;
 
@@ -85,7 +85,7 @@ ELitTrue.  Expr6 ::= "true" ; --DONE --FIXME: print to lowerCase
 
 ELitFalse. Expr6 ::= "false" ; --DONE --FIXME: print to lowerCase
 
-EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
+EApp.      Expr6 ::= Ident "(" [Expr] ")" ; --DONE --TODO: & arguments!
 
 EString.   Expr6 ::= String ; --DONE
 
@@ -109,7 +109,7 @@ separator  Expr "," ;
 
 -- operators -----------------------------------------------
 --DONE
-Plus.      AddOp ::= "+" ;
+Plus.      AddOp ::= "+" ; -- TODO:FIXME: dodawanie stringów umożliwić!!!
 
 Minus.     AddOp ::= "-" ;
 

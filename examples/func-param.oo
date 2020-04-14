@@ -1,0 +1,11 @@
+bool big(int x) {
+    if (x > 50) return true;
+    else return false;
+}
+
+bool checkCondition(<(int):bool> cond, int x) {
+    return cond(x);
+}
+
+print(checkCondition(big, 100)); // true
+//print(checkCondition((int x) : bool -> { return x == 5; }, 10 )); // false

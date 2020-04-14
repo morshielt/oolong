@@ -6,7 +6,7 @@ import           Control.Monad.Reader
 import           Control.Monad.State
 import           Control.Monad.Except
 
-import AbsOolong 
+import           AbsOolong
 
 
 
@@ -18,13 +18,14 @@ type VarToLoc = M.Map Var Loc -- ENV
 -- type Fun = 
 
 valToType :: Val -> Type
-valToType (VInt    _) = Int
-valToType (VBool   _) = Bool
-valToType (VString _) = Str
-valToType VVoid       = Void
-valToType _ = error "valToType unimplemented yet"
-
-data Val = VInt Integer | VBool Bool | VString String | VVoid deriving (Show)  -- | VFun Fun 
+valToType (VInt    _)         = Int
+valToType (VBool   _)         = Bool
+valToType (VString _)         = Str
+valToType VVoid               = Void
+valToType (VFun args ret _ _) = Fun (Prelude.map fst args) ret
+-- valToType _           = error "valToType unimplemented yet"
+                                                                --   args           ret   env(closure)   body
+data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [(Type, Var)]  Type  VarToLoc       [Stmt] deriving (Show)
 
 type LocToVal = M.Map Loc Val -- STORE
 
