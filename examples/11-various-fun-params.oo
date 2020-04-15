@@ -1,0 +1,14 @@
+
+void misc_params(int ctr, string msg, bool cond) {
+    while (ctr > 0 && cond) {
+        print(msg);
+        ctr--;
+    }
+    return;
+}
+
+int i = 5;
+misc_params(i, "five", i == 5);
+
+i = 6;
+misc_params(i, "five", i == 5);

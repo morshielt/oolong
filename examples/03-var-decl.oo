@@ -1,0 +1,8 @@
+
+int i, default_int = 0;
+string s, default_string = "";
+bool b, default_bool = false;
+
+print(i == default_int);
+print(s == default_string); //TODO: EQUALITY for types & STRING CONCAT
+print(b == default_bool);

@@ -1,7 +1,8 @@
 int x = 5;
 int f(int y) {
+    int p = 2;
     int add2(int z) {
-        return z + 2;
+        return z + p;
     }
     return x * add2(y);
 }

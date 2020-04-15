@@ -1,0 +1,17 @@
+// not allowed - `is_even` doesn't know about `is_odd`
+
+bool is_even(int n) {
+    if (n == 0)
+        return true;
+    else
+        return is_odd(n - 1);
+}
+
+bool is_odd(int n) {
+    if (n == 0)
+        return false;
+    else
+        return is_even(n - 1);
+}
+
+print(is_odd(4));

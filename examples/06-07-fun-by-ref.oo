@@ -1,0 +1,8 @@
+int x = 5;
+int mult3 (int &y) {
+    y = y * 3;
+    return y;
+}
+
+print(mult3(x)); // 15
+print(x); // 15

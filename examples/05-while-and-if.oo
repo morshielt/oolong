@@ -1,0 +1,12 @@
+int ctr = 5;
+int factorial = 1;
+
+while (ctr > 0) {
+    if (ctr == 1)
+        print(factorial);
+    else
+        factorial = factorial * ctr;
+    ctr--;
+}
+
+if (factorial == 120) print("5! = 120");

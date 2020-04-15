@@ -1,0 +1,23 @@
+// nie da się wzajemnej rekurencji, no bo jest ewaluacja od góry do dołu no
+
+
+//print(!"X");
+//print(-"X");
+
+print(!"x");
+
+print (5/0);
+
+int k, l = 5, m = 2 * l; // OH
+
+print(function_jakas);
+
+if (2+2) print("you shouldn't do this, you know...");
+
+
+
+bool big(int x) {
+    if (x > 50) return true;
+    else return false;
+}
+print(big == big); // true

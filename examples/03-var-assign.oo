@@ -1,21 +1,6 @@
-int p,r;
-print(p);
-print(r);
+int i = 10;
+int k = i + 3;
 
-bool f;
-print(f);
+i = k * 2;
 
-string e;
-print(e);
-
-string x = "mikrofalowka", z, f="fujka";
-print(x);
-print(z);
-print(f);
-
-r = 11111101;
-print(r);
-
-//void l;
-int i = "szynka";
-print(i);
+print(i == 26 && k == 13);

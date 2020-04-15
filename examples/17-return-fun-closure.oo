@@ -1,0 +1,9 @@
+<(int) : int> multByPlus1Function(int multiplier) {
+    int m = multiplier + 1;
+    return (int x) : int -> {
+        return x * m;
+    };
+}
+
+<(int) : int> multBy5 = multByPlus1Function(4);
+print(multBy5(7)); // 35

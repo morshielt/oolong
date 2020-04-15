@@ -4,8 +4,6 @@ int f(int y) {
     return x * y;
 }
 
-print(f(2));
-
 int g(int z) {
     int x = 1;
     return f(x+z);

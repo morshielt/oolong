@@ -1,0 +1,12 @@
+
+string misc_params(int ctr, string msg) {
+    string acc;
+    while (ctr > 0) {
+        acc = acc + msg;
+        ctr--;
+    }
+    return acc;
+}
+
+print(misc_params(5, "five "));
+

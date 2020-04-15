@@ -5,5 +5,3 @@ print(true);
 print(false);
 print(!false);
 
-//print(!"X");
-//print(-"X");

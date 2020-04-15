@@ -40,6 +40,12 @@ instance Show Val where
         VBool   False -> "false"
         VString s     -> s
 
+instance Eq Val where
+    (VInt    v) == (VInt    v') = v == v'
+    (VBool   v) == (VBool   v') = v == v'
+    (VString v) == (VString v') = v == v'
+
+
 type LocToVal = M.Map Loc Val -- STORE
 
 type ReturnVal = Maybe Val

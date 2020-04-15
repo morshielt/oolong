@@ -1,6 +1,0 @@
-
-int i;
-int j = 1;
-int k, l = 5;
-
-print(i);

@@ -1,0 +1,9 @@
+int i = 1;
+print(i);
+
+string s = "hello world";
+print(s);
+
+bool b = true;
+print(b);
+

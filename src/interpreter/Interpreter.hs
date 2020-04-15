@@ -60,17 +60,7 @@ evalExprM (EApp (Ident name) es) = do
     (VFun args ret clos body) <- readVal name
     guard (length es == length args) -- TODO: czy długości się zgadzają!!!!! throwM!
 
-    -- varVals                   <- getVarValFromArgsAndExpr args es
-
     varLocs <- getVarLocs args es
-    --     (\(var, val) -> do
-    --         loc <- alloc val
-    --         putNewVal loc val
-    --         return (var, loc)
-    --     )
-    --     varVals
-
-    -- let argsOverr = M.fromList varLocs
 
     let env' = M.unionWith (curry snd) clos varLocs
     (_, retVal) <- local (const env') (execStmtsM body)
@@ -155,6 +145,7 @@ mulOp Div   = div
 mulOp Mod   = mod
 
 performAddOp :: AddOp -> Val -> Val -> Val
+performAddOp Plus (VString a) (VString b) = VString $ a ++ b
 performAddOp op (VInt a) (VInt b) = VInt $ addOp op a b
 performAddOp _  _        _        = error "performAddOp"
 
@@ -163,6 +154,8 @@ addOp Plus  = (+)
 addOp Minus = (-)
 
 performRelOp :: RelOp -> Val -> Val -> Val
+performRelOp EQU a b = VBool $ a == b -- TODO: handle all types gurl!
+performRelOp NE a b = VBool $ a /= b -- TODO: ^
 performRelOp op (VInt a) (VInt b) = VBool $ relOp op a b
 performRelOp _  _        _        = error "performRelOp"
 
