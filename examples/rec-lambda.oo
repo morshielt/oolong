@@ -1,0 +1,19 @@
+<(int) : int> sum = 
+    (int i) : int -> { if (i == 1) return 1; else return i + sum(i-1); };
+// TODO: ta deklaracja powinna się jakoś wywalić, w tc pewnie się sprawdzi.
+
+//print(sum(10)); // 55
+
+
+// recursive lambdas are not allowed, 
+//but it's possible to assign recursive function (declared as function) 
+//to variable (kinda missing a point there but well, maybe with returning functions makes more sense);
+
+
+int sum(int i) {
+    if (i == 1) return 1;
+    else return i + sum(i-1);
+}
+
+<(int) : int> summo = sum;
+print(summo(10)); // 55

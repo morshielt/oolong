@@ -5,7 +5,6 @@ import           AbsOolong
 
 import           Types
 import           Utils
-import           Expressions
 
 import           Data.Map                      as M
                                          hiding ( map )
@@ -25,24 +24,55 @@ getVarValFromArgsAndExpr args es = do
             return (var, val)
         )
         tve
-        
+
+getVarLocs :: [Arg] -> [Expr] -> IMon VarToLoc
+getVarLocs args es = do
+    list <- zipWithM matchArgExpr args es
+    return $ M.fromList list
+  where
+    matchArgExpr :: Arg -> Expr -> IMon (Var, Loc)
+    matchArgExpr (Arg t (Ident var)) e = do
+        val <- getValAndCheckType t e
+        loc <- alloc val
+        putNewVal loc val
+        return (var, loc)
+    matchArgExpr (RefArg t (Ident var)) e@(EVar (Ident var')) = do
+        _   <- getValAndCheckType t e
+        loc <- getLoc var'
+        return (var, loc)
+    matchArgExpr (RefArg t var) _ = throwM
+        "Only variable arguments are allowed for reference arguments."
+
 evalExprM :: Expr -> IMon ReturnVal
-evalExprM (EVar (Ident var)    ) = (return . Just) =<< readVal var
+evalExprM (EVar (Ident var)           ) = (return . Just) =<< readVal var
+
+evalExprM (ELambda args ret (Block ss)) = do -- TODO: no lambda recursion!
+    env <- ask
+    (return . Just) $ VFun args ret env ss
+    -- let val = VFun args ret env ss
+    -- loc <- alloc val
+    -- let env' = M.insert name loc env
+    -- let val' = VFun args ret env' ss
+    -- putNewVal loc val'
+    -- return (env', Nothing)
 
 evalExprM (EApp (Ident name) es) = do
     (VFun args ret clos body) <- readVal name
-    varVals                   <- getVarValFromArgsAndExpr args es
+    guard (length es == length args) -- TODO: czy długości się zgadzają!!!!! throwM!
 
-    varLocs                   <- mapM
-        (\(var, val) -> do
-            loc <- alloc val
-            putNewVal loc val
-            return (var, loc)
-        )
-        varVals
-    let argsOverr = M.fromList varLocs
+    -- varVals                   <- getVarValFromArgsAndExpr args es
 
-    let env'      = M.unionWith (curry snd) clos argsOverr
+    varLocs <- getVarLocs args es
+    --     (\(var, val) -> do
+    --         loc <- alloc val
+    --         putNewVal loc val
+    --         return (var, loc)
+    --     )
+    --     varVals
+
+    -- let argsOverr = M.fromList varLocs
+
+    let env' = M.unionWith (curry snd) clos varLocs
     (_, retVal) <- local (const env') (execStmtsM body)
 
     case retVal of
@@ -207,10 +237,7 @@ execStmtM (SPrint e) = do
             then throwM $ "print: invalid type of expression: " ++ show
                 (valToType val)
             else do
-                liftIO $ putStrLn $ case val of
-                    (VInt    x) -> show x
-                    (VBool   b) -> show b
-                    (VString s) -> s
+                liftIO $ print val
                 continueInCurrentEnv
         Nothing -> throwM $ "print: invalid expression " ++ show e
 
@@ -229,12 +256,11 @@ execStmtM (Ret e) = do
 
 execStmtM (FnDef ret (Ident name) args (Block ss)) = do
     env <- ask
-    let val = VFun (map (\(Arg t (Ident var)) -> (t, var)) args) ret env ss -- TODO: FIXME:RECURSION DOESN'T WORK!
+    let val = VFun args ret env ss
     loc <- alloc val
-    putNewVal loc val
     let env' = M.insert name loc env
-    let val' = VFun (map (\(Arg t (Ident var)) -> (t, var)) args) ret env' ss
-    putVal loc val' --Maybe it'll work now, maybe
+    let val' = VFun args ret env' ss
+    putNewVal loc val'
     return (env', Nothing)
 
 execStmtM (Decl _ []) =

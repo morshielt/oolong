@@ -21,7 +21,6 @@ executable interp
     SkelOolong
     Types
     Utils
-    Expressions
     Interpreter
     TypeCheck
   main-is:             Main.hs

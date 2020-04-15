@@ -19,14 +19,18 @@ type VarToLoc = M.Map Var Loc -- ENV
 type Ref = Bool
 
 valToType :: Val -> Type
-valToType (VInt    _)       = Int
-valToType (VBool   _)       = Bool
-valToType (VString _)       = Str
-valToType VVoid             = Void
-valToType (VFun args ret _ _) = Fun (map fst args) ret
+valToType (VInt    _)         = Int
+valToType (VBool   _)         = Bool
+valToType (VString _)         = Str
+valToType VVoid               = Void
+valToType (VFun args ret _ _) = Fun (map fst args') ret
+  where
+    args' = map argToType args
+    argToType (Arg    t (Ident var)) = (t, var)
+    argToType (RefArg t (Ident var)) = (t, var)
 -- valToType _       = error "valToType unimplemented yet"
                                 --   args       ret   env(closure)   body
-data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [(Type, Var)]  Type  VarToLoc     [Stmt] -- deriving (Show)
+data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Arg]  Type  VarToLoc     [Stmt] -- deriving (Show)
 -- data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Type] Type ([Val] -> IMon(VarToLoc, ReturnVal))
 
 instance Show Val where

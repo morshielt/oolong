@@ -43,14 +43,14 @@ putNewVal loc val = do
         )
     return ()
 
-putVal :: Loc -> Val -> IMon ()
-putVal loc val = do
+replaceVal :: Loc -> Val -> IMon ()
+replaceVal loc val = do
     old <- getVal loc
     if valToType old == valToType val
         then putNewVal loc val
         else
             throwM
-            $  "putVal: Expected type: "
+            $  "replaceVal: Expected type: "
             ++ show (valToType old)
             ++ " Got: "
             ++ show (valToType val)
@@ -58,7 +58,7 @@ putVal loc val = do
 changeVal :: Var -> Val -> IMon ()
 changeVal var val = do
     loc <- getLoc var
-    putVal loc val
+    replaceVal loc val
 
 readVal :: Var -> IMon Val
 readVal var = do

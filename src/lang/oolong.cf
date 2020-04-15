@@ -55,7 +55,7 @@ FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ; -- ZMIENIA ENV GNIDA JEDNA -
 
 Arg. 	   Arg ::= Type Ident; --DONE
 
-RefArg.	   Arg ::= Type "&" Ident; -- IN FUNCTION DEFINITIONS ONLY (calls must provide a variable, not a primitive)
+RefArg.	   Arg ::= Type "&" Ident; --DONE -- IN FUNCTION DEFINITIONS ONLY (calls must provide a variable, not a primitive)
 
 separator  Arg "," ;
 
@@ -75,7 +75,7 @@ separator  Type "," ;
 
 -- Expressions ---------------------------------------------
 
-ELambda.   Expr6 ::= "(" [Arg] ")" ":" Type "->" Block ;
+ELambda.   Expr6 ::= "(" [Arg] ")" ":" Type "->" Block ; --DONE
 
 EVar.      Expr6 ::= Ident ;--DONE
 
@@ -85,7 +85,7 @@ ELitTrue.  Expr6 ::= "true" ; --DONE --FIXME: print to lowerCase
 
 ELitFalse. Expr6 ::= "false" ; --DONE --FIXME: print to lowerCase
 
-EApp.      Expr6 ::= Ident "(" [Expr] ")" ; --DONE --TODO: & arguments!
+EApp.      Expr6 ::= Ident "(" [Expr] ")" ; --DONE --FIXME: change VFun type and redo
 
 EString.   Expr6 ::= String ; --DONE
 

@@ -3,4 +3,4 @@ int sum(int i) {
     else return i + sum(i-1);
 }
 
-print(sum(10));
+print(sum(10)); // 55
