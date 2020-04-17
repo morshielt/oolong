@@ -1,0 +1,16 @@
+int x = 1;
+int y = 2;
+
+int foo(int c, int y) {
+    if (x == 2) {
+        // tu brakuje
+    } else if (y > 42) {
+        if (x == 3) {
+            return 32; // tu jest OK
+        } else {
+         gir   ;
+        }
+    } else {
+        ;
+    }
+}

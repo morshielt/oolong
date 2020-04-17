@@ -21,3 +21,7 @@ bool big(int x) {
     else return false;
 }
 print(big == big); // true
+
+
+<(int) : int> multBy5;
+void i;

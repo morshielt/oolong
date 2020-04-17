@@ -8,6 +8,8 @@ import           Control.Monad.Trans.Except
 import           Data.Map                      as M
 import           Types
 
+
+-- INTERP ONLY
 throwM :: String -> IMon a
 throwM = lift . lift . throwE
 

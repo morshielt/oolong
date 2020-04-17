@@ -20,6 +20,7 @@ executable interp
     PrintOolong
     SkelOolong
     Types
+    Common
     Utils
     Interpreter
     TypeCheck

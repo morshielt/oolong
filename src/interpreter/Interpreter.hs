@@ -1,5 +1,8 @@
 -- {-# LANGUAGE FlexibleContexts #-}
-module Interpreter where
+module Interpreter
+    ( runInterpreter
+    )
+where
 
 import           AbsOolong
 
@@ -13,6 +16,7 @@ import           Control.Monad.Reader
 import           Control.Monad.State
 import           Control.Monad.Trans.Except
 
+-- TODO: showS errors???
 
 ------------------EXPR---------------------------------------------------------
 
@@ -146,18 +150,18 @@ mulOp Mod   = mod
 
 performAddOp :: AddOp -> Val -> Val -> Val
 performAddOp Plus (VString a) (VString b) = VString $ a ++ b
-performAddOp op (VInt a) (VInt b) = VInt $ addOp op a b
-performAddOp _  _        _        = error "performAddOp"
+performAddOp op   (VInt    a) (VInt    b) = VInt $ addOp op a b
+performAddOp _    _           _           = error "performAddOp"
 
 addOp :: AddOp -> Integer -> Integer -> Integer
 addOp Plus  = (+)
 addOp Minus = (-)
 
 performRelOp :: RelOp -> Val -> Val -> Val
-performRelOp EQU a b = VBool $ a == b -- TODO: handle all types gurl!
-performRelOp NE a b = VBool $ a /= b -- TODO: ^
-performRelOp op (VInt a) (VInt b) = VBool $ relOp op a b
-performRelOp _  _        _        = error "performRelOp"
+performRelOp EQU a        b        = VBool $ a == b -- TODO: handle all types gurl!
+performRelOp NE  a        b        = VBool $ a /= b -- TODO: ^
+performRelOp op  (VInt a) (VInt b) = VBool $ relOp op a b
+performRelOp _   _        _        = error "performRelOp"
 
 relOp :: RelOp -> Integer -> Integer -> Bool
 relOp LTH = (<)

@@ -4,29 +4,15 @@ import           System.IO                      ( stderr
                                                 , hPutStrLn
                                                 )
 import           Control.Monad.Except
-import           Control.Monad                  ( when )
 
 import           ParOolong
-import           PrintOolong
 import           AbsOolong
 
 import           TypeCheck
 import           Interpreter
-
+import           Common
 
 import           ErrM
-
-
-putStrV :: Int -> String -> IO ()
-putStrV v s = when (v > 1) $ putStrLn s
-
-showTree :: (Show a, Print a) => Int -> a -> IO ()
-showTree v tree = do
-    putStrV v $ "\n[Abstract Syntax]\n\n" ++ show tree
-    putStrV v $ "\n[Linearized tree]\n\n" ++ printTree tree
-
-
--- driver
 
 check :: String -> IO ()
 check s = case pProgram (myLexer s) of
@@ -35,13 +21,15 @@ check s = case pProgram (myLexer s) of
         putStrLn err
         exitFailure
     Ok tree -> do
-        showTree 2 tree
-        case typecheck tree of
-            Bad err -> do
-                putStrLn "TYPE ERROR"
-                putStrLn err
+        showTree tree
+        putStrLn "--------------------------------------------------------"
+        tcRes <- runExceptT $ runTypeChecker tree
+        case tcRes of
+            Left e -> do
+                hPutStrLn stderr $ "Typecheck exception: " ++ e
                 exitFailure
-            Ok _ -> do
+            Right _ -> do
+                putStrLn "--------------------------------------------------------"
                 res <- runExceptT $ runInterpreter tree
                 case res of
                     Left e -> do

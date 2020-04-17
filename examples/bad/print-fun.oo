@@ -1,0 +1,1 @@
+print((int x) : bool -> { return x == 5; }); // TC error
