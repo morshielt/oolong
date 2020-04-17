@@ -4,5 +4,5 @@ int mult3 (int y) {
     return y;
 }
 
-print(mult3(x)); // 15
-print(x); // 5
+//print(mult3(x)); // 15
+//print(x); // 5

@@ -193,8 +193,15 @@ checkStmtM (CondElse e s1 s2) = do
     ask
 
 checkStmtM (BStmt (Block ss)) = do
+    env <- ask
     s <- asks scope
-    local (\env -> env { scope = s + 1 }) (checkStmtsM ss)
+    envAfter <- local (\env -> env { scope = s + 1 }) (checkStmtsM ss)
+    liftIO $ putStrLn  "----------"
+    liftIO $ putStrLn $ "Return type: " ++  show (retType envAfter)
+    liftIO $ putStrLn $ printTree ss
+    liftIO $ putStrLn  "----------"
+    return env { retType = retType envAfter }
+
 
 checkStmtM VRet = do
     env <- ask -- TODO: idk if that's enough

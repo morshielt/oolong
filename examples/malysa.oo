@@ -1,16 +1,31 @@
-int x = 1;
-int y = 2;
+// int f(int x, int y) {
+//     if (x == 2) {
+//             return 32;
+//     } else if (y > 42) {
+//         if (x == 3) {
+//             return 32;
+//         } else {
+//             return 32;
+//         }
+//     } else {
+//         return 32;
+//     }
+// }
 
-int foo(int c, int y) {
-    if (x == 2) {
-        // tu brakuje
-    } else if (y > 42) {
-        if (x == 3) {
-            return 32; // tu jest OK
-        } else {
-         gir   ;
-        }
+int f(int x) {
+    if (x > 0) {
+        return 1;
     } else {
-        ;
+        return 0;
     }
 }
+
+
+// Program [FnDef Int (Ident "f") [Arg Int (Ident "x")] 
+
+// (Block [
+//     CondElse (ERel (EVar (Ident "x")) GTH (ELitInt 0))
+//     (BStmt (Block [Ret (ELitInt 1)]))
+//     (BStmt (Block [Ret (ELitInt 0)]))
+//     ]
+//     )]
