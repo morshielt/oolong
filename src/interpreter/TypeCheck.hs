@@ -36,7 +36,7 @@ data TCEnv = TCEnv
   { varToTypeScope :: M.Map Ident (Type, Scope)
   , funToTypeScope :: M.Map Ident (FunType, Scope)
   , scope :: Scope
-  , retType :: Maybe Type
+  , expectedRet :: Maybe Type
   } deriving Show
 
 type TCMon a = ReaderT TCEnv (ExceptT String IO) a
@@ -109,11 +109,27 @@ checkExprM (ERel e1 _ e2) = do
     matchBinOpTypes [Int] e1 e2
     return Bool
 
-checkExprM (EAnd e1 e2) = matchBinOpTypes [Bool] e1 e2
-checkExprM (EOr  e1 e2) = matchBinOpTypes [Bool] e1 e2
-checkExprM (EVar var  ) = getVarType var
+checkExprM (EAnd e1 e2 ) = matchBinOpTypes [Bool] e1 e2
+checkExprM (EOr  e1 e2 ) = matchBinOpTypes [Bool] e1 e2
+checkExprM (EVar var   ) = getVarType var
 
-checkExprM e            = do
+checkExprM (EApp var es) = do
+    typeScope <- getFunTypeScope var
+    case typeScope of
+        Nothing                -> throwTCM $ show var ++ " is not a function"
+        (Just (F ret args, s)) -> do
+            -- eTs <- mapM checkExprM es
+            checkArgs args es
+            return ret
+  where
+    checkArgs :: [ArgType] -> [Expr] -> TCMon ()
+    checkArgs args es = mapM_ checkArg $ zip args es
+    checkArg (R t, e@(EVar var)) = matchExpType t e
+    checkArg (R t, _) = throwTCM "Reference argument must be a variable"
+    checkArg (T t, e) = matchExpType t e
+
+
+checkExprM e = do
     liftIO $ putStrLn $ printTree e
     error "XD"
 
@@ -146,10 +162,9 @@ checkStmtM (Decl t ds) = do
     ds' <- mapM (declToPair t) ds
     let decls = M.fromList ds'
     env <- asks varToTypeScope
-    guard (intersection env decls == M.empty)
-    -- TODO: można zrobić guard na intersection xD
+    -- FIXME:FIXED: NIE można zrobić guard na intersection xD
     tcEnv <- ask
-    return $ tcEnv { varToTypeScope = M.unionWith (curry snd) env decls } -- TODO: ty chyba whatever fst/snd bo nigdy się nie powinny pokryć
+    return $ tcEnv { varToTypeScope = M.unionWith (curry snd) env decls } -- TODO: KONIECZNIE SND
   where
     declToPair :: Type -> Item -> TCMon (Ident, (Type, Scope))
     declToPair t d = do
@@ -162,7 +177,7 @@ checkStmtM (Decl t ds) = do
                 matchExpType t e
                 showExprType e t
                 return var
-        checkIfVarAlreadyInScope var
+        checkIfNameAlreadyInScope var
         scope <- asks scope
         return (var, (t, scope))
 
@@ -187,35 +202,45 @@ checkStmtM (Cond e s) = do
     ask
 
 checkStmtM (CondElse e s1 s2) = do
+    liftIO $ putStrLn "checkStmtM (CondElse e s1 s2)"
     matchExpType Bool e
-    checkStmtM s1
-    checkStmtM s2
-    ask
+    env1 <- checkStmtM s1
+    env2 <- checkStmtM s2
+    let ret1 = expectedRet env1
+    let ret2 = expectedRet env2
+    case (ret1, ret2) of
+        (Nothing, Nothing) -> ask
+        (Nothing, Just _) ->
+            throwTCM "Missing return value in one of if/else branches"
+        (Just _, Nothing) ->
+            throwTCM "Missing return value in one of if/else branches"
+        (Just t1, Just t2) -> do
+            matchType t1 t2 -- Message might be dumb. "Expected type Str, but got Int", when we were in int type function.
+            ask
 
 checkStmtM (BStmt (Block ss)) = do
-    env <- ask
-    s <- asks scope
+    liftIO $ putStrLn "checkStmtM (BStmt (Block ss))"
+    env      <- ask
+    s        <- asks scope
     envAfter <- local (\env -> env { scope = s + 1 }) (checkStmtsM ss)
-    liftIO $ putStrLn  "----------"
-    liftIO $ putStrLn $ "Return type: " ++  show (retType envAfter)
+    liftIO $ putStrLn "----------"
+    liftIO $ putStrLn $ "Return type: " ++ show (expectedRet envAfter)
     liftIO $ putStrLn $ printTree ss
-    liftIO $ putStrLn  "----------"
-    return env { retType = retType envAfter }
+    liftIO $ putStrLn "----------"
+    return env { expectedRet = expectedRet envAfter }
+    -- ask
 
+checkStmtM VRet    = matchReturn Void
 
-checkStmtM VRet = do
-    env <- ask -- TODO: idk if that's enough
-    return env { retType = Just Void }
-    
 checkStmtM (Ret e) = do
+    liftIO $ putStrLn "checkStmtM Ret"
     e' <- checkExprM e
-    env <- ask -- TODO: idk if that's enough
-    return env { retType = Just e' }
+    matchReturn e'
 
 
 
-checkStmtM (FnDef ret name args (Block ss)) = do
-    checkIfVarAlreadyInScope name
+checkStmtM (FnDef ret name args bs@(Block ss)) = do
+    checkIfNameAlreadyInScope name
 
     scope <- asks scope
     env   <- asks funToTypeScope
@@ -227,17 +252,35 @@ checkStmtM (FnDef ret name args (Block ss)) = do
     let vTTS = varToTypeScope newEnv
     let newEnvWithArgs = newEnv
             { varToTypeScope = M.unionWith (curry snd) vTTS (M.fromList aVTS)
+            , expectedRet    = Just ret
             }
 
+    envAfter <- local (const newEnvWithArgs) $ checkStmtM (BStmt bs)
+     -- o tutaj check myślęęęęęę, hmmmmmmmmm
+    liftIO $ putStrLn "----------"
+    liftIO $ putStrLn $ "Return type in FnDef: " ++ show (expectedRet envAfter)
+    liftIO $ putStrLn $ printTree ss
+    liftIO $ putStrLn "----------"
 
-
-    envAfter <- local (const newEnvWithArgs) $ checkStmtsM ss -- o tutaj check myślęęęęęę, hmmmmmmmmm
-    --TODO: check return type!!!!!!!!!!!!!!!!!!!!!!!! and does every branch return
-    case retType envAfter of
-        Nothing     -> throwTCM "Missing return value TODO"
+    -- --TODO: check return type!!!!!!!!!!!!!!!!!!!!!!!! and does every branch return
+    case expectedRet envAfter of
+        Nothing -> do
+            liftIO $ putStrLn "Haven't checked function ret type."
+            ask -- throwTCM "Missing return value TODO"
         (Just ret') -> if ret /= ret'
             then throwTCM "Invalid return type TODO"
             else return newEnv
+
+
+
+matchReturn :: Type -> TCMon TCEnv
+matchReturn t = do
+    ex <- asks expectedRet
+    case ex of
+        Nothing   -> throwTCM "Return outside of function"
+        (Just eT) -> matchType eT t
+    ask
+
 
 argsToTypes :: [Arg] -> [ArgType]
 argsToTypes = map argToType
@@ -277,16 +320,31 @@ getVarTypeScope var = do
     env   <- asks varToTypeScope
     return $ M.lookup var env
 
-checkIfVarAlreadyInScope :: Ident -> TCMon ()
-checkIfVarAlreadyInScope var = do
-    scope     <- asks scope
-    typeScope <- getVarTypeScope var
+getFunTypeScope :: Ident -> TCMon (Maybe (FunType, Scope))
+getFunTypeScope var = do
+    scope <- asks scope
+    env   <- asks funToTypeScope
+    return $ M.lookup var env
+
+checkIfNameAlreadyInScope :: Ident -> TCMon ()
+checkIfNameAlreadyInScope var = do
+    scope      <- asks scope
+    typeScope  <- getVarTypeScope var
+    ftypeScope <- getFunTypeScope var
     case typeScope of
         Nothing -> return ()
-        (Just (t, s)) ->
+        (Just (_, s)) ->
             when (scope == s)
                 $  throwTCM
                 $  "Variable "
+                ++ show var
+                ++ " already declared"
+    case ftypeScope of
+        Nothing -> return ()
+        (Just (_, s)) ->
+            when (scope == s)
+                $  throwTCM
+                $  "Function "
                 ++ show var
                 ++ " already declared"
 
@@ -297,14 +355,15 @@ checkStmtsM :: [Stmt] -> TCMon TCEnv
 checkStmtsM []       = ask
 checkStmtsM (s : xs) = do
     env <- checkStmtM s
-    let ret = retType env
-    case ret of
-        Nothing ->
-            -- liftIO $ putStrLn "NOTHINGrETURNED~  "
-            local (const env) (checkStmtsM xs) -- always run in 'new' env, which is only sometimes changed
-        _ -> do
-            liftIO $ putStrLn "Type's been returned~  "
-            return env
+    local (const env) (checkStmtsM xs)
+    -- let ret = expectedRet env
+    -- case ret of
+    --     Nothing ->
+    --         -- liftIO $ putStrLn "NOTHINGrETURNED~  "
+    --         local (const env) (checkStmtsM xs) -- always run in 'new' env, which is only sometimes changed
+    --     _ -> do
+    --         liftIO $ putStrLn "Type's been returned~  "
+    --         return env
 
 
 runTypeChecker (Program prog) =

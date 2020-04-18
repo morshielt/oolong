@@ -14,7 +14,7 @@ Block.     Block ::= "{" [Stmt] "}" ;    --DONE
 
 separator  Stmt "" ;
 
-Empty.     Stmt ::= ";" ;   
+Empty.     Stmt ::= ";" ;    --DONE
 
 BStmt.     Stmt ::= Block ;    --DONE
 
@@ -22,7 +22,7 @@ Decl.      Stmt ::= Type [Item] ";" ; --DONE
 
 DefaultInit.    Item ::= Ident ; --DONE
 
-Init.      Item ::= Ident "=" Expr ;
+Init.      Item ::= Ident "=" Expr ; --DONE
 
 separator nonempty Item "," ;
 
@@ -32,9 +32,9 @@ Incr.      Stmt ::= Ident "++"  ";" ;  --DONE
 
 Decr.      Stmt ::= Ident "--"  ";" ;  --DONE
 
-Ret.       Stmt ::= "return" Expr ";" ;   
+Ret.       Stmt ::= "return" Expr ";" ;    --DONE
 
-VRet.      Stmt ::= "return" ";" ;   
+VRet.      Stmt ::= "return" ";" ;    --DONE
 
 Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ;    --DONE
 
@@ -51,11 +51,11 @@ SPrint.      Stmt ::= "print" "(" Expr ")" ";" ; --DONE -- ONLY Expr OF TYPE INT
 
 SExp.      Stmt ::= Expr  ";" ; --DONE
 
-FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ; -- ZMIENIA ENV GNIDA JEDNA   
+FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ;  --DONE -- ZMIENIA ENV GNIDA JEDNA   
 
-Arg. 	   Arg ::= Type Ident;   
+Arg. 	   Arg ::= Type Ident;    --DONE
 
-RefArg.	   Arg ::= Type "&" Ident;    -- IN FUNCTION DEFINITIONS ONLY (calls must provide a variable, not a primitive)
+RefArg.	   Arg ::= Type "&" Ident;   --DONE  -- IN FUNCTION DEFINITIONS ONLY (calls must provide a variable, not a primitive)
 
 separator  Arg "," ;
 
@@ -85,7 +85,7 @@ ELitTrue.  Expr6 ::= "true" ; --DONE
 
 ELitFalse. Expr6 ::= "false" ; --DONE
 
-EApp.      Expr6 ::= Ident "(" [Expr] ")" ;    --FIXME: change VFun type and redo
+EApp.      Expr6 ::= Ident "(" [Expr] ")" ; --DONE   --FIXME: change VFun type and redo
 
 EString.   Expr6 ::= String ;   --DONE
 
