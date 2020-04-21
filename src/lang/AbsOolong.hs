@@ -39,7 +39,10 @@ data Item = DefaultInit Ident | Init Ident Expr
 data Arg = Arg Type Ident | RefArg Type Ident
   deriving (Eq, Ord, Show, Read)
 
-data Type = Int | Str | Bool | Void | Fun [Type] Type
+data Type = Int | Str | Bool | Void | Fun [ByValOrRef] Type
+  deriving (Eq, Ord, Show, Read)
+
+data ByValOrRef = ByVal Type | ByRef Type
   deriving (Eq, Ord, Show, Read)
 
 data Expr

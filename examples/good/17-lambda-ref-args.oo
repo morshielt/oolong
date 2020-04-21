@@ -1,0 +1,12 @@
+<(int&) : void> multByPlus1Function(int multiplier) {
+    int m = multiplier + 1;
+    return (int& x) : void -> {
+        x = x * m;
+        return;
+    };
+}
+
+<(int&) : void> varTimes5 = multByPlus1Function(4);
+int x = 7;
+varTimes5(x);
+print(x); // 35

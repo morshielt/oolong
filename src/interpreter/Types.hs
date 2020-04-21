@@ -26,8 +26,8 @@ valToType VVoid               = Void
 valToType (VFun args ret _ _) = Fun (map fst args') ret
   where
     args' = map argToType args
-    argToType (Arg    t (Ident var)) = (t, var)
-    argToType (RefArg t (Ident var)) = (t, var)
+    argToType (Arg    t (Ident var)) = (ByVal t, var)
+    argToType (RefArg t (Ident var)) = (ByRef t, var)
 -- valToType _       = error "valToType unimplemented yet"
                                 --   args       ret   env(closure)   body
 data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Arg]  Type  VarToLoc     [Stmt] -- deriving (Show)
@@ -50,11 +50,18 @@ type LocToVal = M.Map Loc Val -- STORE
 
 type ReturnVal = Maybe Val
 
+type Flow = Maybe FlowVal
+
+data FlowVal = Br | Cont | R Val
+
 data IMState = IMState
   { locToVal :: LocToVal
   , freeLoc :: Loc
   } deriving Show
 
+breakLoc, continueLoc :: Loc
+breakLoc = -1
+continueLoc = -2
 
 type IMon a = ReaderT VarToLoc (StateT IMState (ExceptT String IO)) a
 

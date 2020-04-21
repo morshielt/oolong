@@ -69,9 +69,15 @@ Bool.      Type ::= "bool" ;
 
 Void.      Type ::= "void" ;   
 
-Fun.       Type ::= "<""(" [Type] ")" ":" Type ">";   
+Fun.       Type ::= "<""(" [ByValOrRef] ")" ":" Type ">";   
 
-separator  Type "," ;
+--separator  Type "," ;
+
+ByVal.  ByValOrRef ::= Type ;
+
+ByRef.  ByValOrRef ::=  Type "&" ;
+
+separator      ByValOrRef "," ;
 
 -- Expressions ---------------------------------------------
 

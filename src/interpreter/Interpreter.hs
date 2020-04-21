@@ -5,6 +5,7 @@ module Interpreter
 where
 
 import           AbsOolong
+import           PrintOolong
 
 import           Types
 import           Utils
@@ -77,8 +78,8 @@ evalExprM (EApp (Ident name) es) = do
                 ++ show ret
                 ++ " Got: "
                 ++ show Void
-        (Just val) -> if valToType val == ret
-            then return retVal
+        (Just (R val)) -> if valToType val == ret
+            then return (Just val)
             else
                 throwM
                 $  name
@@ -133,6 +134,10 @@ evalExprM (EOr e f) = do
     e' <- evalExprM e
     f' <- evalExprM f
     return $ liftM2 (performAndOr (||)) e' f'
+
+evalExprM e = do
+    liftIO $ putStrLn $ printTree e
+    error "evalExprM e"
 
 -- TODO: FIXME: errory złe
 performAndOr :: (Bool -> Bool -> Bool) -> Val -> Val -> Val
@@ -205,7 +210,7 @@ getValAndCheckType t e = do
 -- TODO: nigdzie się jeszcze nie sprawdza, 
 -- czy w danym scope nie ma już czasem zmiennej o takiej nazwie!
 
-continueInCurrentEnv :: IMon (VarToLoc, ReturnVal)
+continueInCurrentEnv :: IMon (VarToLoc, Flow)
 continueInCurrentEnv = do
     env <- ask
     return (env, Nothing)
@@ -220,7 +225,7 @@ valToString res = case res of
     Nothing -> error "ERROR Nothing valToString"
 
 
-execStmtM :: Stmt -> IMon (VarToLoc, ReturnVal)
+execStmtM :: Stmt -> IMon (VarToLoc, Flow)
 execStmtM Empty    = continueInCurrentEnv
 execStmtM (SExp e) = do
     e' <- evalExprM e
@@ -241,14 +246,14 @@ execStmtM (SPrint e) = do
 
 execStmtM VRet = do
     env <- ask
-    return (env, Just VVoid)
+    return (env, Just (R VVoid))
 
 execStmtM (Ret e) = do
     e' <- evalExprM e
     case e' of
         (Just val) -> do
             env <- ask
-            return (env, e')
+            return (env, Just (R val))
         Nothing -> throwM $ "Illegal expression to return: " ++ show e
 
 execStmtM (FnDef ret (Ident name) args (Block ss)) = do
@@ -321,29 +326,55 @@ execStmtM (Ass (Ident var) e) = do
         -- let env' = M.insert var loc env
         -- local (const env') (execStmtM (Decl t items))
 
+execStmtM Continue = do
+    env <- ask
+    return (env, Just Cont)
 
-execStmtM (While e s) = execCondAndActM e continueWhile continueInCurrentEnv
-  where
-    continueWhile = do
-        execStmtM s
-        execStmtM (While e s)
+execStmtM Break = do
+    env <- ask
+    return (env, Just Br)
+
+execStmtM while@(While e s) = do
+
+    b <- evalExprM e
+    case b of
+        (Just cond) -> case cond of
+            (VBool True) -> do
+                (_, ret) <- execStmtM s
+                case ret of
+                    (Just Br) -> do
+                        liftIO $ putStrLn "BREAK"
+                        continueInCurrentEnv
+                    _ -> execStmtM while
+            (VBool False) -> continueInCurrentEnv
+            _ ->
+                throwM
+                    $  "Illegal expression for while loop condition: " -- TODO: nazwa while jest malo uniwersAlna xD
+                    ++ show e
+        Nothing ->
+            throwM $ "Invalid expression for while loop condition: " ++ show e
+
+    -- execCondAndActM e continueWhile continueInCurrentEnv
 
 execStmtM (Cond e s) = execCondAndActM e (execStmtM s) continueInCurrentEnv
 
 execStmtM (CondElse e s1 s2) = execCondAndActM e (execStmtM s1) (execStmtM s2)
 
-execStmtM (BStmt (Block ss)) = do
-    env <- ask
-    local (const env) (execStmtsM ss) -- TODO NIE WIEM C>Y TO JEST DOBRZE (W SENSIE VAR. SHADOW)
-    return (env, Nothing)
+execStmtM (BStmt (Block ss)) = execStmtsM ss
+-- do
+--     env <- ask
+--     local (const env) (execStmtsM ss) -- TODO NIE WIEM C>Y TO JEST DOBRZE (W SENSIE VAR. SHADOW)
+--     return (env, Nothing)
 
-execStmtM _ = error "Not implemented yet or error xD"
+execStmtM e                  = do
+    liftIO $ putStrLn $ printTree e
+    error "execStmtM e"
 
 execCondAndActM
     :: Expr
-    -> IMon (VarToLoc, ReturnVal)
-    -> IMon (VarToLoc, ReturnVal)
-    -> IMon (VarToLoc, ReturnVal)
+    -> IMon (VarToLoc, Flow)
+    -> IMon (VarToLoc, Flow)
+    -> IMon (VarToLoc, Flow)
 execCondAndActM e tFun fFun = do
     b <- evalExprM e
     case b of
@@ -358,7 +389,7 @@ execCondAndActM e tFun fFun = do
             throwM $ "Invalid expression for while loop condition: " ++ show e
 
 
-execStmtsM :: [Stmt] -> IMon (VarToLoc, ReturnVal)
+execStmtsM :: [Stmt] -> IMon (VarToLoc, Flow)
 execStmtsM []       = continueInCurrentEnv
 execStmtsM (s : xs) = do
     (possiblyUpdatedEnv, ret) <- execStmtM s
@@ -369,6 +400,7 @@ execStmtsM (s : xs) = do
         _ -> do
             liftIO $ putStrLn "Value's been returned~  "
             return (possiblyUpdatedEnv, ret) -- (?) function return (?)
+        -- _ -> continueInCurrentEnv
 
 runInterpreter (Program prog) = runStateT
     (runReaderT (execStmtsM prog) M.empty)

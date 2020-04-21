@@ -5,5 +5,5 @@
     };
 }
 
-<(int) : int> multBy5 = multByPlus1Function(4);
-print(multBy5(7)); // 35
+<(int) : int> valueTimes5 = multByPlus1Function(4);
+print(valueTimes5(7)); // 35

@@ -50,7 +50,11 @@ transType x = case x of
   Str -> failure x
   Bool -> failure x
   Void -> failure x
-  Fun types type_ -> failure x
+  Fun byvalorrefs type_ -> failure x
+transByValOrRef :: ByValOrRef -> Result
+transByValOrRef x = case x of
+  ByVal type_ -> failure x
+  ByRef type_ -> failure x
 transExpr :: Expr -> Result
 transExpr x = case x of
   ELambda args type_ block -> failure x

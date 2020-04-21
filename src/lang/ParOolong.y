@@ -214,20 +214,30 @@ Type :: {
 | 'void' {
   AbsOolong.Void 
 }
-| '<' '(' ListType ')' ':' Type '>' {
+| '<' '(' ListByValOrRef ')' ':' Type '>' {
   AbsOolong.Fun $3 $6 
 }
 
-ListType :: {
-  [Type]
+ByValOrRef :: {
+  ByValOrRef 
+}
+: Type {
+  AbsOolong.ByVal $1 
+}
+| Type '&' {
+  AbsOolong.ByRef $1 
+}
+
+ListByValOrRef :: {
+  [ByValOrRef]
 }
 : {
   [] 
 }
-| Type {
+| ByValOrRef {
   (:[]) $1 
 }
-| Type ',' ListType {
+| ByValOrRef ',' ListByValOrRef {
   (:) $1 $3 
 }
 

@@ -8,8 +8,22 @@ import           Control.Monad.Trans.Except
 import           Data.Map                      as M
 import           Types
 
-
 -- INTERP ONLY
+
+setBreak :: Val -> IMon ()
+setBreak val = modify
+    (\st ->
+        let mod = M.insert breakLoc val (locToVal st) in st { locToVal = mod }
+    )
+
+setContinue :: Val -> IMon ()
+setContinue val = modify
+    (\st ->
+        let mod = M.insert continueLoc val (locToVal st)
+        in  st { locToVal = mod }
+    )
+
+
 throwM :: String -> IMon a
 throwM = lift . lift . throwE
 
