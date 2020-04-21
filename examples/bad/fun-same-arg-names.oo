@@ -1,0 +1,7 @@
+void misc_params(int ctr, string ctr, bool cond) {
+    while (ctr > 0 && cond) {
+        print(msg);
+        ctr--;
+    }
+    return;
+}

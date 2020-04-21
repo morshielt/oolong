@@ -14,7 +14,7 @@ import           AbsOolong
 type Var = String
 type Loc = Integer
 
-type VarToLoc = M.Map Var Loc -- ENV
+type Env = M.Map Var Loc -- ENV
 
 type Ref = Bool
 
@@ -28,10 +28,10 @@ valToType (VFun args ret _ _) = Fun (map fst args') ret
     args' = map argToType args
     argToType (Arg    t (Ident var)) = (ByVal t, var)
     argToType (RefArg t (Ident var)) = (ByRef t, var)
--- valToType _       = error "valToType unimplemented yet"
+
                                 --   args       ret   env(closure)   body
-data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Arg]  Type  VarToLoc     [Stmt] -- deriving (Show)
--- data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Type] Type ([Val] -> IMon(VarToLoc, ReturnVal))
+data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Arg]  Type  Env     [Stmt] -- deriving (Show)
+-- data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Type] Type ([Val] -> IMon(Env, ReturnVal))
 
 instance Show Val where
     show v = case v of
@@ -46,7 +46,7 @@ instance Eq Val where
     (VString v) == (VString v') = v == v'
 
 
-type LocToVal = M.Map Loc Val -- STORE
+type Store = M.Map Loc Val -- STORE
 
 type ReturnVal = Maybe Val
 
@@ -55,27 +55,23 @@ type Flow = Maybe FlowVal
 data FlowVal = Br | Cont | R Val
 
 data IMState = IMState
-  { locToVal :: LocToVal
+  { locToVal :: Store
   , freeLoc :: Loc
   } deriving Show
 
-breakLoc, continueLoc :: Loc
-breakLoc = -1
-continueLoc = -2
-
-type IMon a = ReaderT VarToLoc (StateT IMState (ExceptT String IO)) a
+type IMon a = ReaderT Env (StateT IMState (ExceptT String IO)) a
 
 -- type IExcept = ExceptT String IO
 -- type IState = StateT Store IExcept
 -- type Interpreter = ReaderT Env IState
 
 
-embedded :: ReaderT VarToLoc (StateT IMState (ExceptT String IO)) Int
+embedded :: ReaderT Env (StateT IMState (ExceptT String IO)) Int
 embedded = do
     throwError "DivisionByZeroException" -- Left DivisionByZeroException
     return 1 -- Right (1,IMState {locToVal = fromList [], freeLoc = 0})
 
-readerUnwrap :: VarToLoc -> (StateT IMState (ExceptT String IO)) Int
+readerUnwrap :: Env -> (StateT IMState (ExceptT String IO)) Int
 readerUnwrap = runReaderT embedded
 
 stateUnwrap :: IMState -> ExceptT String IO (Int, IMState)
@@ -85,11 +81,11 @@ exceptUnwrap :: IO (Either String (Int, IMState))
 exceptUnwrap = runExceptT $ stateUnwrap $ IMState M.empty 0
 
 
--- newtype IMon a = IMon (ReaderT VarToLoc (StateT IMState (ExceptT RuntimeException IO)) a)
+-- newtype IMon a = IMon (ReaderT Env (StateT IMState (ExceptT RuntimeException IO)) a)
 --   deriving ( Functor
 --      , Applicative
 --      , Monad
---      , MonadReader VarToLoc
+--      , MonadReader Env
 --      , MonadState IMState
 --      , MonadError RuntimeException
 --      , MonadIO
@@ -101,14 +97,14 @@ exceptUnwrap = runExceptT $ stateUnwrap $ IMState M.empty 0
 --     M.empty
 --     0
 
--- runMyMonad :: VarToLoc -> IMState -> IMon a -> IO (Either RuntimeException a)
--- runMyMonad VarToLoc state (IMon m) = runExceptT s
+-- runMyMonad :: Env -> IMState -> IMon a -> IO (Either RuntimeException a)
+-- runMyMonad Env state (IMon m) = runExceptT s
 --   where
---   r = runReaderT m VarToLoc
+--   r = runReaderT m Env
 --   s = evalStateT r state
 
 
--- initialVarToLocironment :: VarToLoc
+-- initialVarToLocironment :: Env
 -- initialVarToLocironment = M.empty
 
 -- initialState :: IMState

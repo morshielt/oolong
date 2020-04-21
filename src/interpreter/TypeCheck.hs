@@ -8,6 +8,7 @@ import           PrintOolong
 import           ErrM
 
 import           Types                          ( Var )
+import           Utils                          ( addMany )
 
 import           Control.Monad                  ( when )
 import           Control.Monad.Reader
@@ -23,8 +24,10 @@ import           Data.Map                      as M
 
 type Scope = Integer
 
+type NameToTypeScope = M.Map Ident (Type, Scope)
+
 data TCEnv = TCEnv
-  { nameToTypeScope :: M.Map Ident (Type, Scope)
+  { nameToTypeScope :: NameToTypeScope
   , scope :: Scope
   , expectedRet :: Maybe Type
   , inLoop :: Bool
@@ -86,10 +89,9 @@ checkExprM (ELambda args ret bs@(Block ss)) = do
 
     aVTS <- argsToVarAndTypeScope args
     let vTTS = nameToTypeScope tcEnv
-    let newEnvWithArgs = tcEnv
-            { nameToTypeScope = M.unionWith (curry snd) vTTS (M.fromList aVTS)
-            , expectedRet     = Just ret
-            }
+    let newEnvWithArgs = tcEnv { nameToTypeScope = addMany vTTS aVTS
+                               , expectedRet     = Just ret
+                               }
 
     local (const newEnvWithArgs) $ checkStmtM (BStmt bs)
     return t
@@ -132,7 +134,9 @@ checkExprM (EApp var es) = do
         (Just _) -> throwTCM $ show var ++ " is not a function"
   where
     checkArgs :: [ByValOrRef] -> [Expr] -> TCM ()
-    checkArgs args es = mapM_ checkArg $ zip args es
+    checkArgs args es = if length args == length es
+        then mapM_ checkArg $ zip args es
+        else throwTCM "Invalid number of arguments in function call"
     checkArg (ByRef t, e@(EVar var)) = matchExpType t e
     checkArg (ByRef t, _) = throwTCM "Reference argument must be a variable"
     checkArg (ByVal t, e) = matchExpType t e
@@ -168,15 +172,14 @@ checkStmtM (Ass var e) = do
 
 checkStmtM (Decl t ds) = do
     when (t == Void) $ throwTCM "Void variable declaration is forbidden"
-    ds' <- mapM (declToPair t) ds
-    let decls = M.fromList ds'
-    env   <- asks nameToTypeScope
-    -- FIXME:FIXED: NIE można zrobić guard na intersection xD
-    tcEnv <- ask
-    return $ tcEnv { nameToTypeScope = M.unionWith (curry snd) env decls } -- TODO: KONIECZNIE SND
+    env <- ask
+    foldM go env ds
   where
-    declToPair :: Type -> Item -> TCM (Ident, (Type, Scope))
-    declToPair t d = do
+    go :: TCEnv -> Item -> TCM TCEnv
+    go acc d = local (const acc) $ handleDecl t d
+
+    handleDecl :: Type -> Item -> TCM TCEnv
+    handleDecl t d = do
         var <- case d of
             (DefaultInit var) -> case t of
                 (Fun _ _) ->
@@ -188,7 +191,12 @@ checkStmtM (Decl t ds) = do
                 return var
         checkIfNameAlreadyInScope var
         scope <- asks scope
-        return (var, (t, scope))
+
+        let val = (t, scope)
+        env <- ask
+        let nTTS = M.insert var val (nameToTypeScope env)
+        return $ env { nameToTypeScope = nTTS }
+
 
 checkStmtM (Incr var) = do
     t <- getVarType var
@@ -249,10 +257,9 @@ checkStmtM (FnDef ret name args bs@(Block ss)) = do
 
     aVTS <- argsToVarAndTypeScope args
     let vTTS = nameToTypeScope newEnv
-    let newEnvWithArgs = newEnv
-            { nameToTypeScope = M.unionWith (curry snd) vTTS (M.fromList aVTS)
-            , expectedRet     = Just ret
-            }
+    let newEnvWithArgs = newEnv { nameToTypeScope = addMany vTTS aVTS
+                                , expectedRet     = Just ret
+                                }
 
     envAfter <- local (const newEnvWithArgs) $ checkStmtM (BStmt bs)
     return newEnv
@@ -299,16 +306,20 @@ argsToTypes = map argToType
     argToType (Arg    t _) = ByVal t
     argToType (RefArg t _) = ByRef t
 
-argsToVarAndTypeScope :: [Arg] -> TCM [(Ident, (Type, Scope))]
+argsToVarAndTypeScope :: [Arg] -> TCM NameToTypeScope
 argsToVarAndTypeScope args = do
     scope <- asks scope
     let fScope = scope + 1
-    return $ map
-        (\arg -> case arg of
-            (Arg    t var) -> (var, (t, fScope))
-            (RefArg t var) -> (var, (t, fScope))
-        )
-        args
+    let list = map
+            (\arg -> case arg of
+                (Arg    t var) -> (var, (t, fScope))
+                (RefArg t var) -> (var, (t, fScope))
+            )
+            args
+    let mapList = M.fromList list
+    if length list == length mapList
+        then return mapList
+        else throwTCM "Function arguments must have different names"
 
 getVarType :: Ident -> TCM Type
 getVarType var = do
@@ -362,7 +373,8 @@ checkStmtsM (s : xs) = do
 
 
 -- runTypeChecker (Program prog) = return ()
-runTypeChecker (Program prog) = runReaderT (go prog) $ TCEnv M.empty 0 Nothing False
+runTypeChecker (Program prog) = runReaderT (go prog)
+    $ TCEnv M.empty 0 Nothing False
   where
     go prog = do
         checkStmtsM prog

@@ -30,7 +30,7 @@ getVarValFromArgsAndExpr args es = do
         )
         tve
 
-getVarLocs :: [Arg] -> [Expr] -> IMon VarToLoc
+getVarLocs :: [Arg] -> [Expr] -> IMon Env
 getVarLocs args es = do
     list <- zipWithM matchArgExpr args es
     return $ M.fromList list
@@ -48,18 +48,12 @@ getVarLocs args es = do
     matchArgExpr (RefArg t var) _ = throwM
         "Only variable arguments are allowed for reference arguments."
 
-evalExprM :: Expr -> IMon ReturnVal
-evalExprM (EVar (Ident var)           ) = (return . Just) =<< readVal var
+evalExprM :: Expr -> IMon Val
+evalExprM (EVar (Ident var)           ) = readVal var
 
-evalExprM (ELambda args ret (Block ss)) = do -- TODO: no lambda recursion!
+evalExprM (ELambda args ret (Block ss)) = do
     env <- ask
-    (return . Just) $ VFun args ret env ss
-    -- let val = VFun args ret env ss
-    -- loc <- alloc val
-    -- let env' = M.insert name loc env
-    -- let val' = VFun args ret env' ss
-    -- putNewVal loc val'
-    -- return (env', Nothing)
+    return $ VFun args ret env ss
 
 evalExprM (EApp (Ident name) es) = do
     (VFun args ret clos body) <- readVal name
@@ -67,73 +61,53 @@ evalExprM (EApp (Ident name) es) = do
 
     varLocs <- getVarLocs args es
 
-    let env' = M.unionWith (curry snd) clos varLocs
-    (_, retVal) <- local (const env') (execStmtsM body)
+    let env' = addMany clos varLocs
+    -- Type checker ensures return's type and existence, so here pattern match is sufficient
+    (_, Just (R val)) <- local (const env') (execStmtsM body)
+    return val
 
-    case retVal of
-        Nothing ->
-            throwM
-                $  name
-                ++ ": Invalid return type. Expected: "
-                ++ show ret
-                ++ " Got: "
-                ++ show Void
-        (Just (R val)) -> if valToType val == ret
-            then return (Just val)
-            else
-                throwM
-                $  name
-                ++ ": Invalid return type. Expected: "
-                ++ show ret
-                ++ " Got: "
-                ++ show (valToType val)
---   where
-evalExprM (EString s) = (return . Just . VString) s
-evalExprM (ELitInt n) = (return . Just . VInt) n
-evalExprM ELitTrue    = (return . Just . VBool) True
-evalExprM ELitFalse   = (return . Just . VBool) False
+evalExprM (EString s) = (return . VString) s
+evalExprM (ELitInt n) = (return . VInt) n
+evalExprM ELitTrue    = (return . VBool) True
+evalExprM ELitFalse   = (return . VBool) False
 
 evalExprM (Neg e)     = do
     e' <- evalExprM e
     case e' of
-        (Just e'') -> case e'' of
-            (VInt n) -> (return . Just . VInt . negate) n
-            _        -> throwM "TODO Inappropriate type for integer negation"
-        Nothing -> throwM "TODO Nothing to integer negate"
+        (VInt n) -> (return . VInt . negate) n
+        _        -> throwM "TODO Inappropriate type for integer negation"
 
 evalExprM (Not e) = do
     e' <- evalExprM e
     case e' of
-        (Just e'') -> case e'' of
-            (VBool b) -> (return . Just . VBool . not) b
-            _         -> throwM "TODO Inappropriate type for bool negation"
-        Nothing -> throwM "TODO Nothing to bool negate"
+        (VBool b) -> (return . VBool . not) b
+        _         -> throwM "TODO Inappropriate type for bool negation"
 
 
 evalExprM (EMul e symbol f) = do
     e' <- evalExprM e
     f' <- evalExprM f
-    return $ liftM2 (performMulOp symbol) e' f'
+    return $ performMulOp symbol e' f'
 
 evalExprM (EAdd e symbol f) = do
     e' <- evalExprM e
     f' <- evalExprM f
-    return $ liftM2 (performAddOp symbol) e' f'
+    return $ performAddOp symbol e' f'
 
 evalExprM (ERel e symbol f) = do
     e' <- evalExprM e
     f' <- evalExprM f
-    return $ liftM2 (performRelOp symbol) e' f'
+    return $ performRelOp symbol e' f'
 
-evalExprM (EAnd e f) = do
+evalExprM (EAnd e f) = do --TODO: lazy evaluation????????
     e' <- evalExprM e
     f' <- evalExprM f
-    return $ liftM2 (performAndOr (&&)) e' f'
+    return $ performAndOr (&&) e' f'
 
 evalExprM (EOr e f) = do
     e' <- evalExprM e
     f' <- evalExprM f
-    return $ liftM2 (performAndOr (||)) e' f'
+    return $ performAndOr (||) e' f'
 
 evalExprM e = do
     liftIO $ putStrLn $ printTree e
@@ -193,24 +167,17 @@ relOp NE  = (/=)
 
 getValAndCheckType :: Type -> Expr -> IMon Val
 getValAndCheckType t e = do
-    e' <- evalExprM e
-    case e' of
-        (Just val) -> if t == valToType val
-            then return val
-            else
-                throwM
-                $  "Expression \""
-                ++ show e
-                ++ "\" doesn't match type: "
-                ++ show t
-        Nothing ->
-            throwM $ "Illegal expression for variable declaration: " ++ show e
+    val <- evalExprM e
+    if t == valToType val
+        then return val
+        else
+            throwM
+            $  "Expression \""
+            ++ show e
+            ++ "\" doesn't match type: "
+            ++ show t
 
-
--- TODO: nigdzie się jeszcze nie sprawdza, 
--- czy w danym scope nie ma już czasem zmiennej o takiej nazwie!
-
-continueInCurrentEnv :: IMon (VarToLoc, Flow)
+continueInCurrentEnv :: IMon (Env, Flow)
 continueInCurrentEnv = do
     env <- ask
     return (env, Nothing)
@@ -225,36 +192,29 @@ valToString res = case res of
     Nothing -> error "ERROR Nothing valToString"
 
 
-execStmtM :: Stmt -> IMon (VarToLoc, Flow)
+execStmtM :: Stmt -> IMon (Env, Flow)
 execStmtM Empty    = continueInCurrentEnv
 execStmtM (SExp e) = do
     e' <- evalExprM e
-    case e' of
-        (Just _) -> continueInCurrentEnv
-        Nothing  -> throwM $ "SExp: invalid expression " ++ show e
-execStmtM (SPrint e) = do
-    e' <- evalExprM e
-    case e' of
-        (Just val) -> if valToType val `notElem` [Int, Bool, Str]
-            then throwM $ "print: invalid type of expression: " ++ show
-                (valToType val)
-            else do
-                liftIO $ print val
-                continueInCurrentEnv
-        Nothing -> throwM $ "print: invalid expression " ++ show e
+    continueInCurrentEnv
 
+execStmtM (SPrint e) = do
+    val <- evalExprM e
+    if valToType val `notElem` [Int, Bool, Str]
+        then throwM $ "print: invalid type of expression: " ++ show
+            (valToType val)
+        else do
+            liftIO $ print val
+            continueInCurrentEnv
 
 execStmtM VRet = do
     env <- ask
     return (env, Just (R VVoid))
 
 execStmtM (Ret e) = do
-    e' <- evalExprM e
-    case e' of
-        (Just val) -> do
-            env <- ask
-            return (env, Just (R val))
-        Nothing -> throwM $ "Illegal expression to return: " ++ show e
+    val <- evalExprM e
+    env <- ask
+    return (env, Just (R val))
 
 execStmtM (FnDef ret (Ident name) args (Block ss)) = do
     env <- ask
@@ -271,22 +231,26 @@ execStmtM (Decl Void _) =
     throwM $ "Illegal type for variable declaration: " ++ show Void
 execStmtM (Decl (Fun _ _) (DefaultInit _ : _)) =
     throwM "Function declaration without initialisation is forbidden."
+
 execStmtM (Decl t ds) = do
-    ds' <- mapM declToPair ds
-    let decls = M.fromList ds'
     env <- ask
-    let env' = M.unionWith (curry snd) env decls -- TODO: musi być snd? 
-    return (env', Nothing)
+    foldM go (env, Nothing) ds
   where
-    -- w sensie teoretycznie chyba i tak nie powinno być zmiennych z tą samą nazwą 
-    -- w tym samym bloku, ale wydaje mi się, że to się przyda to nadpisywania w kolejnych blokach,
-    -- nie wiem
+    go (possiblyUpdatedEnv, ret) d =
+        local (const possiblyUpdatedEnv) $ handleDecl d
+    handleDecl d = do
+        (var, loc) <- declToPair d
+        env        <- ask
+        let env' = M.insert var loc env -- TODO: musi być snd? 
+        return (env', Nothing)
+
     declToPair :: Item -> IMon (Var, Loc)
     declToPair d = do
         (var, val) <- unpackDeclaration d
         loc        <- alloc val -- NIGDZIE NIE SPRAWDZAM CZY NIE MA JUŻ ZMIENNEJ Z TYM ID, NIEDOBRZE NO
         putNewVal loc val
-        return (var, loc)       -- TODO: ew. bez typechecka to: dodać zmienną z nr-em scope i mapę var->nr_scope "w jakim scope ostatnie zadekralowaną tą zmienną"
+        return (var, loc)
+
     unpackDeclaration :: Item -> IMon (Var, Val)
     unpackDeclaration (DefaultInit (Ident var)) =
         (return . (,) var) $ case t of
@@ -315,13 +279,9 @@ execStmtM (Decr (Ident var)) = do
         _ -> throwM "Illegal type to increment."
 
 execStmtM (Ass (Ident var) e) = do
-    e' <- evalExprM e
-    case e' of
-        (Just val) -> do
-            changeVal var val
-            continueInCurrentEnv
-        Nothing ->
-            throwM $ "Illegal expression for variable assignment: " ++ show e
+    val <- evalExprM e
+    changeVal var val
+    continueInCurrentEnv
 
         -- let env' = M.insert var loc env
         -- local (const env') (execStmtM (Decl t items))
@@ -335,24 +295,21 @@ execStmtM Break = do
     return (env, Just Br)
 
 execStmtM while@(While e s) = do
+    cond <- evalExprM e
+    case cond of
+        (VBool True) -> do
+            (_, ret) <- execStmtM s
+            case ret of
+                (Just Br) -> do
+                    liftIO $ putStrLn "BREAK"
+                    continueInCurrentEnv
+                _ -> execStmtM while
+        (VBool False) -> continueInCurrentEnv
+        _ ->
+            throwM
+                $  "Illegal expression for while loop condition: " -- TODO: nazwa while jest malo uniwersAlna xD
+                ++ show e
 
-    b <- evalExprM e
-    case b of
-        (Just cond) -> case cond of
-            (VBool True) -> do
-                (_, ret) <- execStmtM s
-                case ret of
-                    (Just Br) -> do
-                        liftIO $ putStrLn "BREAK"
-                        continueInCurrentEnv
-                    _ -> execStmtM while
-            (VBool False) -> continueInCurrentEnv
-            _ ->
-                throwM
-                    $  "Illegal expression for while loop condition: " -- TODO: nazwa while jest malo uniwersAlna xD
-                    ++ show e
-        Nothing ->
-            throwM $ "Invalid expression for while loop condition: " ++ show e
 
     -- execCondAndActM e continueWhile continueInCurrentEnv
 
@@ -361,46 +318,35 @@ execStmtM (Cond e s) = execCondAndActM e (execStmtM s) continueInCurrentEnv
 execStmtM (CondElse e s1 s2) = execCondAndActM e (execStmtM s1) (execStmtM s2)
 
 execStmtM (BStmt (Block ss)) = execStmtsM ss
--- do
---     env <- ask
---     local (const env) (execStmtsM ss) -- TODO NIE WIEM C>Y TO JEST DOBRZE (W SENSIE VAR. SHADOW)
---     return (env, Nothing)
 
 execStmtM e                  = do
     liftIO $ putStrLn $ printTree e
     error "execStmtM e"
 
 execCondAndActM
-    :: Expr
-    -> IMon (VarToLoc, Flow)
-    -> IMon (VarToLoc, Flow)
-    -> IMon (VarToLoc, Flow)
+    :: Expr -> IMon (Env, Flow) -> IMon (Env, Flow) -> IMon (Env, Flow)
 execCondAndActM e tFun fFun = do
-    b <- evalExprM e
-    case b of
-        (Just cond) -> case cond of
-            (VBool True ) -> tFun
-            (VBool False) -> fFun
-            _ ->
-                throwM
-                    $  "Illegal expression for while loop condition: " -- TODO: nazwa while jest malo uniwersAlna xD
-                    ++ show e
-        Nothing ->
-            throwM $ "Invalid expression for while loop condition: " ++ show e
+    cond <- evalExprM e
+    case cond of
+        (VBool True ) -> tFun
+        (VBool False) -> fFun
+        _ ->
+            throwM
+                $  "Illegal expression for while loop condition: " -- TODO: nazwa while jest malo uniwersAlna xD
+                ++ show e
 
 
-execStmtsM :: [Stmt] -> IMon (VarToLoc, Flow)
-execStmtsM []       = continueInCurrentEnv
-execStmtsM (s : xs) = do
-    (possiblyUpdatedEnv, ret) <- execStmtM s
-    case ret of
-        Nothing ->
-            -- liftIO $ putStrLn "NOTHINGrETURNED~  "
-            local (const possiblyUpdatedEnv) (execStmtsM xs) -- always run in 'new' env, which is only sometimes changed
-        _ -> do
+execStmtsM :: [Stmt] -> IMon (Env, Flow)
+execStmtsM ss = do
+    env <- ask
+    foldM go (env, Nothing) ss
+  where
+    go (possiblyUpdatedEnv, ret) s = case ret of
+        Nothing -> local (const possiblyUpdatedEnv) (execStmtM s) -- always run in 'new' env, which is only sometimes changed
+        _       -> do
             liftIO $ putStrLn "Value's been returned~  "
-            return (possiblyUpdatedEnv, ret) -- (?) function return (?)
-        -- _ -> continueInCurrentEnv
+            return (possiblyUpdatedEnv, ret)
+
 
 runInterpreter (Program prog) = runStateT
     (runReaderT (execStmtsM prog) M.empty)
