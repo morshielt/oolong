@@ -10,16 +10,21 @@ import           Types
 
 -- INTERP ONLY
 
-addMany :: Ord a => M.Map a b -> M.Map a b -> M.Map a b
-addMany = M.unionWith (curry snd)
+overwriteMap :: Ord a => M.Map a b -> M.Map a b -> M.Map a b
+overwriteMap = M.unionWith (curry snd)
 
 throwM :: String -> IMon a
 throwM = lift . lift . throwE
 
-alloc :: Val -> IMon Loc
-alloc val = do
+alloc :: IMon Loc
+alloc = do
     modify (\st -> st { freeLoc = freeLoc st + 1 })
     gets freeLoc
+
+allocAndPutVal :: Val -> IMon ()
+allocAndPutVal val = do
+    loc <- alloc
+    putVal loc val
 
 getLoc :: Var -> IMon Loc
 getLoc var = do
@@ -40,32 +45,37 @@ getVal loc = do
         (Just val') -> return val'
 
 
-putNewVal :: Loc -> Val -> IMon ()
-putNewVal loc val = do
+putVal :: Loc -> Val -> IMon ()
+putVal loc val = do
     modify
         (\st ->
             let mod = M.insert loc val (locToVal st) in st { locToVal = mod }
         )
     return ()
 
-replaceVal :: Loc -> Val -> IMon ()
-replaceVal loc val = do
-    old <- getVal loc
-    if valToType old == valToType val
-        then putNewVal loc val
-        else
-            throwM
-            $  "replaceVal: Expected type: "
-            ++ show (valToType old)
-            ++ " Got: "
-            ++ show (valToType val)
-
 changeVal :: Var -> Val -> IMon ()
 changeVal var val = do
     loc <- getLoc var
-    replaceVal loc val
+    putVal loc val
 
-readVal :: Var -> IMon Val
-readVal var = do
+readVar :: Var -> IMon Val
+readVar var = do
     loc <- getLoc var
     getVal loc
+
+setLoc :: Var -> Loc -> IMon Env
+setLoc var loc = asks (M.insert var loc)
+
+declare :: Var -> Val -> IMon Env
+declare var val = do
+    loc <- alloc
+    putVal loc val
+    setLoc var loc
+
+-- declFn name  = do
+--     env <- ask
+--     loc <- alloc
+--     let env' = M.insert name loc env
+--     let val' = VFun args ret env' ss
+--     putVal loc val'
+

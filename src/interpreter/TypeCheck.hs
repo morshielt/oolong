@@ -8,7 +8,7 @@ import           PrintOolong
 import           ErrM
 
 import           Types                          ( Var )
-import           Utils                          ( addMany )
+import           Utils                          ( overwriteMap )
 
 import           Control.Monad                  ( when )
 import           Control.Monad.Reader
@@ -89,7 +89,7 @@ checkExprM (ELambda args ret bs@(Block ss)) = do
 
     aVTS <- argsToVarAndTypeScope args
     let vTTS = nameToTypeScope tcEnv
-    let newEnvWithArgs = tcEnv { nameToTypeScope = addMany vTTS aVTS
+    let newEnvWithArgs = tcEnv { nameToTypeScope = overwriteMap vTTS aVTS
                                , expectedRet     = Just ret
                                }
 
@@ -257,7 +257,7 @@ checkStmtM (FnDef ret name args bs@(Block ss)) = do
 
     aVTS <- argsToVarAndTypeScope args
     let vTTS = nameToTypeScope newEnv
-    let newEnvWithArgs = newEnv { nameToTypeScope = addMany vTTS aVTS
+    let newEnvWithArgs = newEnv { nameToTypeScope = overwriteMap vTTS aVTS
                                 , expectedRet     = Just ret
                                 }
 

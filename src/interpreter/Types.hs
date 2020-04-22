@@ -30,8 +30,13 @@ valToType (VFun args ret _ _) = Fun (map fst args') ret
     argToType (RefArg t (Ident var)) = (ByRef t, var)
 
                                 --   args       ret   env(closure)   body
-data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Arg]  Type  Env     [Stmt] -- deriving (Show)
+data Val = VInt Integer | VBool Bool | VString String | VVoid | VFn ([Expr] -> IMon Val) | VFun [Arg]  Type  Env     [Stmt] -- deriving (Show)
 -- data Val = VInt Integer | VBool Bool | VString String | VVoid | VFun [Type] Type ([Val] -> IMon(Env, ReturnVal))
+
+defaultVal :: Type -> Val
+defaultVal Int  = VInt 0
+defaultVal Bool = VBool False
+defaultVal Str  = VString ""
 
 instance Show Val where
     show v = case v of
@@ -44,6 +49,7 @@ instance Eq Val where
     (VInt    v) == (VInt    v') = v == v'
     (VBool   v) == (VBool   v') = v == v'
     (VString v) == (VString v') = v == v'
+    _           == _            = False
 
 
 type Store = M.Map Loc Val -- STORE
