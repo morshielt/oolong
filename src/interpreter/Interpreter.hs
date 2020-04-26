@@ -21,7 +21,7 @@ import           Control.Monad.Trans.Except
 
 ------------------EXPR---------------------------------------------------------
 
-evalExprM :: Expr -> IMon Val
+evalExprM :: Expr -> IM Val
 evalExprM (EVar (Ident var)           ) = readVar var
 
 evalExprM (ELambda args ret (Block ss)) = do
@@ -34,10 +34,10 @@ evalExprM (EApp (Ident name) es) = do
     (_, Just (R val))    <- local (const env') (execStmtsM ss)
     return val
   where
-    applyArgs :: [Arg] -> [Expr] -> IMon Env
+    applyArgs :: [Arg] -> [Expr] -> IM Env
     applyArgs args es = M.fromList <$> zipWithM matchArgExpr args es
       where
-        matchArgExpr :: Arg -> Expr -> IMon (Var, Loc)
+        matchArgExpr :: Arg -> Expr -> IM (Var, Loc)
         matchArgExpr (Arg t (Ident var)) e = do
             val <- evalExprM e
             loc <- alloc
@@ -61,12 +61,16 @@ evalExprM (Not e) = do
     (VBool b) <- evalExprM e
     (return . VBool . not) b
 
+evalExprM (EMul e Div f) = do
+    (e', f') <- evalExprM2 e f
+    when (f' == VInt 0) $ throwM "Division by 0" --TODO: dzielenie przez 0!
+    return $ mulOp Div e' f'
+
 evalExprM (EMul e op f) = performBinOpM (mulOp op) e f
 evalExprM (EAdd e op f) = performBinOpM (addOp op) e f
 evalExprM (ERel e op f) = performBinOpM (relOp op) e f
 evalExprM (EAnd e f   ) = performBinOpM (andOrOp (&&)) e f
 evalExprM (EOr  e f   ) = performBinOpM (andOrOp (||)) e f
-
 
 evalExprM e             = do
     liftIO $ putStrLn $ printTree e
@@ -77,10 +81,9 @@ evalExprM2 e f = do
     f' <- evalExprM f
     return (e', f')
 
-performBinOpM :: (Val -> Val -> Val) -> Expr -> Expr -> IMon Val
+performBinOpM :: (Val -> Val -> Val) -> Expr -> Expr -> IM Val
 performBinOpM op e f = do
     (e', f') <- evalExprM2 e f
-    -- when (f' == 0 && op == mulOp Div) $ throwM "Division by 0" --TODO: dzielenie przez 0!
     return $ op e' f'
 
 mulOp :: MulOp -> Val -> Val -> Val
@@ -106,12 +109,12 @@ andOrOp op (VBool a) (VBool b) = VBool $ op a b
 
 ----------------------STMTS----------------------------------------------------
 
-continueM :: IMon (Env, Flow)
+continueM :: IM (Env, Flow)
 continueM = do
     env <- ask
     return (env, Nothing)
 
-execStmtM :: Stmt -> IMon (Env, Flow)
+execStmtM :: Stmt -> IM (Env, Flow)
 execStmtM Empty      = continueM
 execStmtM (SExp   e) = evalExprM e >> continueM
 execStmtM (SPrint e) = evalExprM e >>= liftIO . print >> continueM
@@ -119,7 +122,7 @@ execStmtM (SPrint e) = evalExprM e >>= liftIO . print >> continueM
 execStmtM VRet       = liftM2 (,) ask $ return (Just (R VVoid))
 execStmtM (Ret e)    = liftM2 (,) ask $ Just . R <$> evalExprM e
 
-execStmtM (FnDef ret (Ident name) args (Block ss)) = do
+execStmtM (FnDef ret (Ident name) args (Block ss)) = do -- TODO: może wydzielić do funkcji ale nw czy jest sens
     env <- ask
     loc <- alloc
     let env' = M.insert name loc env
@@ -131,10 +134,10 @@ execStmtM (Decl t ds) = do
     env <- ask
     flip (,) Nothing <$> foldM go env ds
   where
-    go :: Env -> Item -> IMon Env
+    go :: Env -> Item -> IM Env
     go env d = local (const env) $ unpackDecl d >>= uncurry declare
       where
-        unpackDecl :: Item -> IMon (Var, Val)
+        unpackDecl :: Item -> IM (Var, Val)
         unpackDecl (Init (Ident var) e     ) = (,) var <$> evalExprM e
         unpackDecl (DefaultInit (Ident var)) = return (var, defaultVal t)
 
@@ -175,15 +178,14 @@ execStmtM e                  = do
     liftIO $ putStrLn $ printTree e
     error "execStmtM e"
 
-execCondAndActM
-    :: Expr -> IMon (Env, Flow) -> IMon (Env, Flow) -> IMon (Env, Flow)
+execCondAndActM :: Expr -> IM (Env, Flow) -> IM (Env, Flow) -> IM (Env, Flow)
 execCondAndActM e trueM falseM = do
     cond <- evalExprM e
     case cond of
         (VBool True ) -> trueM
         (VBool False) -> falseM
 
-execStmtsM :: [Stmt] -> IMon (Env, Flow)
+execStmtsM :: [Stmt] -> IM (Env, Flow)
 execStmtsM ss = do
     env <- ask
     foldM go (env, Nothing) ss
