@@ -10,26 +10,24 @@ import           AbsOolong
 
 import           TypeCheck
 import           Interpreter
-import           Common
 
 import           ErrM
+
+import           Control.Monad                  ( when )
+import           PrintOolong
 
 check :: String -> IO ()
 check s = case pProgram (myLexer s) of
     Bad err -> do
-        putStrLn "SYNTAX ERROR"
-        putStrLn err
+        hPutStrLn stderr $ "[Syntax error] " ++ err
         exitFailure
     Ok tree -> do
-        showTree tree
-        putStrLn "--------------------------------------------------------"
         tcRes <- runExceptT $ runTypeChecker tree
         case tcRes of
             Left e -> do
                 hPutStrLn stderr $ "[Typecheck exception] " ++ e
                 exitFailure
             Right _ -> do
-                putStrLn "--------------------------------------------------------"
                 res <- runExceptT $ runInterpreter tree
                 case res of
                     Left e -> do

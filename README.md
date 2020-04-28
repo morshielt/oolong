@@ -4,6 +4,8 @@ __Maria Oparka 394632__
 *oolong* to imperatywny język oparty o składnię języka *Latte*.
 
 
+`ghc Main -iparser:interp -o interpreter`
+
 ## Gramatyka
 Gramatyka to nieco zmodyfikowana gramatyka języka *Latte*.
 

@@ -76,10 +76,6 @@ evalExprM (EOr e f) = do
     e' <- evalExprM e
     if e' == VBool True then return e' else evalExprM f
 
-evalExprM e = do
-    liftIO $ putStrLn $ printTree e
-    error "evalExprM e"
-
 evalExprM2 e f = do
     e' <- evalExprM e
     f' <- evalExprM f
@@ -165,19 +161,13 @@ execStmtM while@(While e s) = execCondAndActM e continueWhile continueM
     continueWhile = do
         (_, ret) <- execStmtM s
         case ret of
-            (Just Br) -> do
-                liftIO $ putStrLn "BREAK"
-                continueM
-            _ -> execStmtM while
+            (Just Br) -> continueM
+            _         -> execStmtM while
 
 execStmtM (Cond e s        ) = execCondAndActM e (execStmtM s) continueM
 execStmtM (CondElse e s1 s2) = execCondAndActM e (execStmtM s1) (execStmtM s2)
 
 execStmtM (BStmt (Block ss)) = execStmtsM ss
-
-execStmtM e                  = do
-    liftIO $ putStrLn $ printTree e
-    error "execStmtM e"
 
 execCondAndActM :: Expr -> IM (Env, Flow) -> IM (Env, Flow) -> IM (Env, Flow)
 execCondAndActM e trueM falseM = do

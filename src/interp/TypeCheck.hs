@@ -6,9 +6,11 @@ where
 import           AbsOolong
 import           PrintOolong
 
-import           Types                          ( Var )
+import           Types                          ( Var
+                                                , overwriteMap
+                                                )
 import           TCTypes
-import           Utils                          ( overwriteMap )
+import           TCUtils
 
 import           Control.Monad                  ( when )
 import           Control.Monad.Reader
@@ -20,7 +22,6 @@ import           Data.Map                      as M
 matchType :: [TCType] -> TCType -> TCM ()
 matchType [ex] act = when (ex /= act) $ throwTCM $ unwords
     ["Expected type:", show ex, "\nActual type:", show act]
-
 matchType exs act = when (act `notElem` exs) $ throwTCM $ unwords
     ["Expected one of types:", show' exs, "\nActual type:", show act]
 
@@ -92,7 +93,7 @@ checkExprM (     EVar (Ident var)   ) = getVarType var
 checkExprM expr@(EApp (Ident var) es) = do
     typeScope <- getVarTypeScope var
     case typeScope of
-        Nothing -> throwTCM $ "function " ++ var ++ " is not declared"
+        Nothing -> throwTCM $ unwords ["function ", var, " is not declared"]
         (Just (TFun args ret, s)) -> do
             catchError
                 (checkArgs args es)
@@ -101,7 +102,7 @@ checkExprM expr@(EApp (Ident var) es) = do
                         [var, ":", e, "\nin function call:", printTree expr]
                 )
             return ret
-        (Just _) -> throwTCM $ var ++ " is not a function"
+        (Just _) -> throwTCM $ unwords [var, " is not a function"]
   where
     checkArgs :: [TCArg] -> [Expr] -> TCM ()
     checkArgs args es = if length args == length es
@@ -112,10 +113,6 @@ checkExprM expr@(EApp (Ident var) es) = do
         checkArg (R t, _) = throwTCM "Reference argument must be a variable"
         checkArg (V t, e) = matchExpType t e
 
-
-checkExprM e = do
-    liftIO $ putStrLn $ printTree e
-    error "checkExprM e"
 
 
 checkStmtM :: Stmt -> TCM TCEnv
@@ -223,9 +220,6 @@ checkStmtM Continue = do
     loop <- asks inLoop
     if loop then ask else throwTCM "Continue outside of a loop"
 
-checkStmtM e = do
-    liftIO $ putStrLn $ printTree e
-    error "checkStmtM e"
 
 checkIncrDecr :: Var -> Stmt -> TCM TCEnv
 checkIncrDecr var stmt = do
@@ -248,7 +242,6 @@ matchReturn t = do
 handleArgs :: [Arg] -> TCM Types
 handleArgs args = do
     scope <- asks scope
-
     let list = map
             (\arg -> case arg of
                 (Arg    t (Ident var)) -> (var, (typeToTCType t, scope + 1))
@@ -260,6 +253,8 @@ handleArgs args = do
         then return mapList
         else throwTCM "Function arguments must have different names"
 
+
+
 checkStmtsM :: [Stmt] -> TCM TCEnv
 checkStmtsM ss = do
     env <- ask
@@ -268,25 +263,14 @@ checkStmtsM ss = do
     go :: TCEnv -> Stmt -> TCM TCEnv
     go env' s = local (const env') $ checkStmtM s
 
-
-runTypeChecker (Program prog) = runReaderT (go prog)
-    $ TCEnv M.empty 0 Nothing False
-  where
-    go prog = do
-        checkStmtsM prog
-        checkReturns prog
-        ask
-
 checkReturns :: [Stmt] -> TCM ()
 checkReturns = mapM_ checkReturn
   where
     checkExprReturn :: Expr -> TCM ()
     checkExprReturn e@(ELambda _ _ b) = do
         res <- checkReturn (BStmt b)
-        unless res
-            $  throwTCM
-            $  "Missing return value in lambda expression:\n"
-            ++ printTree e
+        unless res $ throwTCM $ unwords
+            ["Missing return value in lambda expression:\n", printTree e]
     checkExprReturn (EApp _ es) = mapM_ checkExprReturn es
     checkExprReturn _           = return ()
 
@@ -299,9 +283,8 @@ checkReturns = mapM_ checkReturn
         if res
             then return False
             else
-                throwTCM
-                $  "Missing return value in function definition:\n"
-                ++ printTree fndef
+                throwTCM $ unwords
+                    ["Missing return value in function:\n", printTree fndef]
     checkReturn (SExp e) = do
         checkExprReturn e
         return False
@@ -317,3 +300,11 @@ checkReturns = mapM_ checkReturn
     checkReturn (BStmt (Block ss)) = foldM checkOr False ss
         where checkOr acc s = (||) acc <$> checkReturn s
     checkReturn _ = return False
+
+runTypeChecker (Program prog) = runReaderT (go prog)
+    $ TCEnv M.empty 0 Nothing False
+  where
+    go prog = do
+        checkStmtsM prog
+        checkReturns prog
+        ask

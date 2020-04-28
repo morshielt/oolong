@@ -8,11 +8,6 @@ import           Control.Monad.Trans.Except
 import           Data.Map                      as M
 import           Types
 
--- INTERP ONLY
-
-overwriteMap :: Ord a => M.Map a b -> M.Map a b -> M.Map a b
-overwriteMap = M.unionWith (curry snd)
-
 throwM :: String -> IM a
 throwM = lift . lift . throwE
 
@@ -21,18 +16,13 @@ alloc = do
     modify (\st -> st { freeLoc = freeLoc st + 1 })
     gets freeLoc
 
-allocAndPutVal :: Val -> IM ()
-allocAndPutVal val = do
-    loc <- alloc
-    putVal loc val
-
 getLoc :: Var -> IM Loc
 getLoc var = do
     env <- ask
     let loc = M.lookup var env
     case loc of
         Nothing ->
-            throwM $ "getLoc: Variable " ++ var ++ " location not found!!!"
+            throwM $ "getLoc: Variable " ++ var ++ " location not found!"
         (Just loc') -> return loc'
 
 getVal :: Loc -> IM Val
@@ -41,9 +31,8 @@ getVal loc = do
     let val = M.lookup loc store
     case val of
         Nothing ->
-            throwM $ "getVal: Location's " ++ show loc ++ "value not found!!!"
+            throwM $ "getVal: Location's " ++ show loc ++ "value not found!"
         (Just val') -> return val'
-
 
 putVal :: Loc -> Val -> IM ()
 putVal loc val = do
@@ -71,11 +60,3 @@ declare var val = do
     loc <- alloc
     putVal loc val
     setLoc var loc
-
--- declFn name  = do
---     env <- ask
---     loc <- alloc
---     let env' = M.insert name loc env
---     let val' = VFun args ret env' ss
---     putVal loc val'
-
