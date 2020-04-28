@@ -8,8 +8,6 @@ print(!"x");
 
 print (5/0);
 
-int k, l = 5, m = 2 * l; // OH
-
 print(function_jakas);
 
 if (2+2) print("you shouldn't do this, you know...");

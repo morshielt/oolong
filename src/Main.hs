@@ -26,14 +26,14 @@ check s = case pProgram (myLexer s) of
         tcRes <- runExceptT $ runTypeChecker tree
         case tcRes of
             Left e -> do
-                hPutStrLn stderr $ "Typecheck exception: " ++ e
+                hPutStrLn stderr $ "[Typecheck exception] " ++ e
                 exitFailure
             Right _ -> do
                 putStrLn "--------------------------------------------------------"
                 res <- runExceptT $ runInterpreter tree
                 case res of
                     Left e -> do
-                        hPutStrLn stderr $ "Runtime exception: " ++ e
+                        hPutStrLn stderr $ "[Runtime exception] " ++ e
                         exitFailure
                     Right _ -> return ()
 

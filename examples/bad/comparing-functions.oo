@@ -1,0 +1,10 @@
+int sum(int i) {
+    return 1;
+    if (i == 1) return 1;
+    else return i + sum(i-1);
+}
+
+<(int) : int> sum1 = sum;
+<(int) : int> sum2 = sum;
+
+sum1 == sum2;

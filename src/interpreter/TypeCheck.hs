@@ -15,6 +15,7 @@ import           Control.Monad.Reader
 import           Control.Monad.Except
 import           Control.Monad.Trans.Except
 
+import           Data.List                      ( intercalate )
 import           Data.Map                      as M
                                          hiding ( map
                                                 , showTree
@@ -22,34 +23,77 @@ import           Data.Map                      as M
 
 -- TODO:TODO:TODO:TODO:TODO:TODO: print Type's (Int, Str, Fun [..]) as 'int', 'string' etc.!
 
+
+show' :: Show a => [a] -> String
+show' = intercalate ", " . map show
+
 type Scope = Integer
 
-type NameToTypeScope = M.Map Ident (Type, Scope)
+type NameToTypeScope = M.Map Ident (TCType, Scope)
 
 data TCEnv = TCEnv
   { nameToTypeScope :: NameToTypeScope
   , scope :: Scope
-  , expectedRet :: Maybe Type
+  , expectedRet :: Maybe TCType
   , inLoop :: Bool
   } deriving Show
 
 type TCM a = ReaderT TCEnv (ExceptT String IO) a
 
+data TCType = TString | TInt | TBool | TVoid | TFun [TCArg] TCType deriving Eq
+data TCArg = R TCType | V TCType deriving Eq
+
+instance Show TCType where
+    show TString         = "`string`"
+    show TInt            = "`int`"
+    show TBool           = "`bool`"
+    show TVoid           = "`void`"
+    show (TFun args ret) = "`<(" ++ show' args ++ ") :" ++ show ret ++ ">`"
+
+typeToTCType :: Type -> TCType
+typeToTCType Str            = TString
+typeToTCType Int            = TInt
+typeToTCType Bool           = TBool
+typeToTCType Void           = TVoid
+typeToTCType (Fun args ret) = TFun (map valRefToTCArg args) (typeToTCType ret)
+
+argToTCArg :: Arg -> TCArg
+argToTCArg (Arg    t _) = V (typeToTCType t)
+argToTCArg (RefArg t _) = R (typeToTCType t)
+
+valRefToTCArg :: ByValOrRef -> TCArg
+valRefToTCArg (ByVal t) = V (typeToTCType t)
+valRefToTCArg (ByRef t) = R (typeToTCType t)
+
+instance Show TCArg where
+    show (R t) = show t ++ "&"
+    show (V t) = show t
 
 throwTCM :: String -> TCM a
 throwTCM = lift . throwE
 
-expectedButGotIn :: Type -> Type -> Expr -> TCM a
-expectedButGotIn eT gT e =
-    throwTCM
+expectedButGotIn :: [TCType] -> TCType -> Expr -> TCM ()
+expectedButGotIn [eT] gT e =
+    when (eT /= gT)
+        $  throwTCM
         $  "Expected type "
         ++ show eT
         ++ ", but got "
         ++ show gT
-        ++ " in expression:\n"
+        ++ " in expression:\t"
         ++ printTree e
 
-matchType :: Type -> Type -> TCM ()
+expectedButGotIn eTs gT e =
+    when (gT `notElem` eTs)
+        $  throwTCM
+        $  "Expected one of types "
+        ++ show' eTs
+        ++ ", but got "
+        ++ show gT
+        ++ " in expression:\t"
+        ++ printTree e
+
+matchType :: TCType -> TCType -> TCM ()
 matchType eT gT =
     when (eT /= gT)
         $  throwTCM
@@ -58,88 +102,90 @@ matchType eT gT =
         ++ ", but got "
         ++ show gT
 
-matchExpType :: Type -> Expr -> TCM Type
+matchExpType :: TCType -> Expr -> TCM TCType
 matchExpType t e = do
     eT <- checkExprM e
     matchType t eT
     return t
 
-matchBinOpTypes :: [Type] -> Expr -> Expr -> TCM Type
+matchBinOpTypes :: [TCType] -> Expr -> Expr -> TCM TCType
 matchBinOpTypes [t] e1 e2 = do
     e1T <- checkExprM e1
     e2T <- checkExprM e2
     matchType t e1T
     matchType t e2T
     return t
+
 matchBinOpTypes ts e1 e2 = do
     e1T <- checkExprM e1
-    if e1T `elem` ts
-        then do
-            e2T <- checkExprM e2
-            matchType e1T e2T
-            return e1T
-        else throwTCM "TODO matchBinOpTypes msg"
+    expectedButGotIn ts e1T e1
+    -- if e1T `elem` ts
+        -- then do
+    e2T <- checkExprM e2
+    matchType e1T e2T
+    return e1T
+        -- else throwTCM "TODO matchBinOpTypes msg"
 
-checkExprM :: Expr -> TCM Type
+checkExprM :: Expr -> TCM TCType
 checkExprM (ELambda args ret bs@(Block ss)) = do
+    let ret' = typeToTCType ret
     -- scope <- asks scope
     -- env   <- asks nameToTypeScope
     tcEnv <- ask
-    let t = Fun (argsToTypes args) ret
+    let t = TFun (argsToTypes args) ret'
 
     aVTS <- argsToVarAndTypeScope args
     let vTTS = nameToTypeScope tcEnv
     let newEnvWithArgs = tcEnv { nameToTypeScope = overwriteMap vTTS aVTS
-                               , expectedRet     = Just ret
+                               , expectedRet     = Just ret'
                                }
 
     local (const newEnvWithArgs) $ checkStmtM (BStmt bs)
     return t
 
+checkExprM (ELitInt _)        = return TInt
+checkExprM ELitTrue           = return TBool
+checkExprM ELitFalse          = return TBool
+checkExprM (EString _       ) = return TString
 
-checkExprM (ELitInt _)        = return Int
-checkExprM ELitTrue           = return Bool
-checkExprM ELitFalse          = return Bool
-checkExprM (EString _       ) = return Str
+checkExprM (Neg     e       ) = matchExpType TInt e
+checkExprM (Not     e       ) = matchExpType TBool e
 
-checkExprM (Neg     e       ) = matchExpType Int e
-checkExprM (Not     e       ) = matchExpType Bool e
-
-checkExprM (EMul e1 _     e2) = matchBinOpTypes [Int] e1 e2
-checkExprM (EAdd e1 Plus  e2) = matchBinOpTypes [Int, Str] e1 e2
-checkExprM (EAdd e1 Minus e2) = matchBinOpTypes [Int] e1 e2
+checkExprM (EMul e1 _     e2) = matchBinOpTypes [TInt] e1 e2
+checkExprM (EAdd e1 Plus  e2) = matchBinOpTypes [TInt, TString] e1 e2
+checkExprM (EAdd e1 Minus e2) = matchBinOpTypes [TInt] e1 e2
 
 checkExprM (ERel e1 EQU   e2) = do
-    matchBinOpTypes [Int, Str, Bool] e1 e2
-    return Bool
+    matchBinOpTypes [TInt, TString, TBool] e1 e2
+    return TBool
 checkExprM (ERel e1 NE e2) = do
-    matchBinOpTypes [Int, Str, Bool] e1 e2
-    return Bool
+    matchBinOpTypes [TInt, TString, TBool] e1 e2
+    return TBool
 checkExprM (ERel e1 _ e2) = do
-    matchBinOpTypes [Int] e1 e2
-    return Bool
+    matchBinOpTypes [TInt] e1 e2
+    return TBool
 
-checkExprM (EAnd e1 e2 ) = matchBinOpTypes [Bool] e1 e2
-checkExprM (EOr  e1 e2 ) = matchBinOpTypes [Bool] e1 e2
+checkExprM (EAnd e1 e2 ) = matchBinOpTypes [TBool] e1 e2
+checkExprM (EOr  e1 e2 ) = matchBinOpTypes [TBool] e1 e2
 checkExprM (EVar var   ) = getVarType var
 
 checkExprM (EApp var es) = do
     typeScope <- getVarTypeScope var
     case typeScope of
         Nothing -> throwTCM $ "function" ++ show var ++ " is not declared"
-        (Just (Fun args ret, s)) -> do
+        (Just (TFun args ret, s)) -> do
             -- eTs <- mapM checkExprM es
             checkArgs args es
             return ret
         (Just _) -> throwTCM $ show var ++ " is not a function"
   where
-    checkArgs :: [ByValOrRef] -> [Expr] -> TCM ()
+    checkArgs :: [TCArg] -> [Expr] -> TCM ()
     checkArgs args es = if length args == length es
         then mapM_ checkArg $ zip args es
         else throwTCM "Invalid number of arguments in function call"
-    checkArg (ByRef t, e@(EVar var)) = matchExpType t e
-    checkArg (ByRef t, _) = throwTCM "Reference argument must be a variable"
-    checkArg (ByVal t, e) = matchExpType t e
+    checkArg (R t, e@(EVar var)) = matchExpType t e
+    checkArg (R t, _) = throwTCM "Reference argument must be a variable"
+    checkArg (V t, e) = matchExpType t e
 
 
 checkExprM e = do
@@ -157,7 +203,7 @@ checkStmtM (SExp e) = do
 
 checkStmtM (SPrint e) = do
     t <- checkExprM e
-    when (t `notElem` [Str, Int, Bool])
+    when (t `notElem` [TString, TInt, TBool])
         $  throwTCM
         $  "Cannot print type "
         ++ show t
@@ -171,18 +217,19 @@ checkStmtM (Ass var e) = do
     ask
 
 checkStmtM (Decl t ds) = do
+    -- let t' = typeToTCType t
     when (t == Void) $ throwTCM "Void variable declaration is forbidden"
     env <- ask
     foldM go env ds
   where
     go :: TCEnv -> Item -> TCM TCEnv
-    go acc d = local (const acc) $ handleDecl t d
+    go acc d = local (const acc) $ handleDecl (typeToTCType t) d
 
-    handleDecl :: Type -> Item -> TCM TCEnv
+    handleDecl :: TCType -> Item -> TCM TCEnv
     handleDecl t d = do
         var <- case d of
             (DefaultInit var) -> case t of
-                (Fun _ _) ->
+                (TFun _ _) ->
                     throwTCM "Default function declaration is forbidden"
                 _ -> return var
             (Init var e) -> do
@@ -200,27 +247,27 @@ checkStmtM (Decl t ds) = do
 
 checkStmtM (Incr var) = do
     t <- getVarType var
-    matchType Int t
+    matchType TInt t
     ask
 
 checkStmtM (Decr var) = do
     t <- getVarType var
-    matchType Int t
+    matchType TInt t
     ask
 
 checkStmtM (While e s) = do
-    matchExpType Bool e
+    matchExpType TBool e
     local (\env -> env { inLoop = True }) (checkStmtM s)
     ask
 
 checkStmtM (Cond e s) = do
-    matchExpType Bool e
+    matchExpType TBool e
     checkStmtM s
     ask
 
 checkStmtM (CondElse e s1 s2) = do
     liftIO $ putStrLn "checkStmtM (CondElse e s1 s2)"
-    matchExpType Bool e
+    matchExpType TBool e
     checkStmtM s1
     checkStmtM s2
     ask
@@ -237,7 +284,7 @@ checkStmtM (BStmt (Block ss)) = do
     -- return env { expectedRet = expectedRet envAfter }
     ask
 
-checkStmtM VRet    = matchReturn Void
+checkStmtM VRet    = matchReturn TVoid
 
 checkStmtM (Ret e) = do
     liftIO $ putStrLn "checkStmtM Ret"
@@ -247,18 +294,19 @@ checkStmtM (Ret e) = do
 
 
 checkStmtM (FnDef ret name args bs@(Block ss)) = do
+    let ret' = typeToTCType ret
     checkIfNameAlreadyInScope name
 
     scope <- asks scope
     env   <- asks nameToTypeScope
     tcEnv <- ask
-    let t      = Fun (argsToTypes args) ret
+    let t      = TFun (argsToTypes args) ret'
     let newEnv = tcEnv { nameToTypeScope = M.insert name (t, scope) env }
 
     aVTS <- argsToVarAndTypeScope args
     let vTTS = nameToTypeScope newEnv
     let newEnvWithArgs = newEnv { nameToTypeScope = overwriteMap vTTS aVTS
-                                , expectedRet     = Just ret
+                                , expectedRet     = Just ret'
                                 }
 
     envAfter <- local (const newEnvWithArgs) $ checkStmtM (BStmt bs)
@@ -290,7 +338,7 @@ checkStmtM e = do
     liftIO $ putStrLn $ printTree e
     error "checkStmtM e"
 
-matchReturn :: Type -> TCM TCEnv
+matchReturn :: TCType -> TCM TCEnv
 matchReturn t = do
     ex <- asks expectedRet
     case ex of
@@ -299,12 +347,12 @@ matchReturn t = do
     ask
 
 
-argsToTypes :: [Arg] -> [ByValOrRef]
-argsToTypes = map argToType
-  where
-    argToType :: Arg -> ByValOrRef
-    argToType (Arg    t _) = ByVal t
-    argToType (RefArg t _) = ByRef t
+argsToTypes :: [Arg] -> [TCArg]
+argsToTypes = map argToTCArg
+--   where
+--     argToType :: Arg -> TCArg
+--     argToType (Arg    t _) = ByVal t
+--     argToType (RefArg t _) = ByRef t
 
 argsToVarAndTypeScope :: [Arg] -> TCM NameToTypeScope
 argsToVarAndTypeScope args = do
@@ -312,8 +360,8 @@ argsToVarAndTypeScope args = do
     let fScope = scope + 1
     let list = map
             (\arg -> case arg of
-                (Arg    t var) -> (var, (t, fScope))
-                (RefArg t var) -> (var, (t, fScope))
+                (Arg    t var) -> (var, (typeToTCType t, fScope))
+                (RefArg t var) -> (var, (typeToTCType t, fScope))
             )
             args
     let mapList = M.fromList list
@@ -321,7 +369,7 @@ argsToVarAndTypeScope args = do
         then return mapList
         else throwTCM "Function arguments must have different names"
 
-getVarType :: Ident -> TCM Type
+getVarType :: Ident -> TCM TCType
 getVarType var = do
     typeScope <- getVarTypeScope var
     case typeScope of
@@ -335,7 +383,7 @@ getVarScope var = do
         Nothing       -> throwTCM $ "Variable " ++ show var ++ " not declared"
         (Just (t, s)) -> return s
 
-getVarTypeScope :: Ident -> TCM (Maybe (Type, Scope))
+getVarTypeScope :: Ident -> TCM (Maybe (TCType, Scope))
 getVarTypeScope var = do
     scope <- asks scope
     env   <- asks nameToTypeScope
@@ -354,7 +402,7 @@ checkIfNameAlreadyInScope var = do
                 ++ show var
                 ++ " already declared"
 
-showExprType :: Expr -> Type -> TCM () -- TODO: REMOVE EVERYWHERE, DEBUG ONLY
+showExprType :: Expr -> TCType -> TCM () -- TODO: REMOVE EVERYWHERE, DEBUG ONLY
 showExprType e t = liftIO $ putStrLn $ printTree e ++ " :: " ++ show t
 
 checkStmtsM :: [Stmt] -> TCM TCEnv
