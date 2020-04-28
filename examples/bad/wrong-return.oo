@@ -1,5 +1,0 @@
-int x = 5;
-void mult3 (int &y) {
-    y = y * 3;
-    return y;
-}

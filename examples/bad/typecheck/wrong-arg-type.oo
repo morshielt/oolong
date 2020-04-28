@@ -1,0 +1,6 @@
+int mult3 (int y) {
+    y = y * 3;
+    return y;
+}
+
+mult3(true);

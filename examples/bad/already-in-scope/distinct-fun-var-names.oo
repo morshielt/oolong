@@ -1,0 +1,6 @@
+int ff = 5;
+
+int ff(int i) {
+    return 5;
+}
+

@@ -1,8 +1,0 @@
-
-int ff(int i) {
-    return 5;
-}
-
-int ff = 5;
-
-// POWINNO SIĘ WYWALIĆ

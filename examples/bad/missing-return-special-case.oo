@@ -1,0 +1,17 @@
+// special case
+// returns in while loops don't matter towards 
+// checking if every branch has a return statement -
+// - we don't know, if while loop will ever be executed,
+// so that branch might not have a return statement,
+// therefore this program is not valid
+
+int g(int x) {
+    if (x > 0) {
+        while (x >= 0) {
+            x--;
+            if (x == 0) return 6;
+        }
+    } else {
+        return 0;
+    }
+}

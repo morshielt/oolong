@@ -63,16 +63,20 @@ evalExprM (Not e) = do
 
 evalExprM (EMul e Div f) = do
     (e', f') <- evalExprM2 e f
-    when (f' == VInt 0) $ throwM "Division by 0" --TODO: dzielenie przez 0!
+    when (f' == VInt 0) $ throwM "Division by 0"
     return $ mulOp Div e' f'
 
 evalExprM (EMul e op f) = performBinOpM (mulOp op) e f
 evalExprM (EAdd e op f) = performBinOpM (addOp op) e f
 evalExprM (ERel e op f) = performBinOpM (relOp op) e f
-evalExprM (EAnd e f   ) = performBinOpM (andOrOp (&&)) e f
-evalExprM (EOr  e f   ) = performBinOpM (andOrOp (||)) e f
+evalExprM (EAnd e f   ) = do
+    e' <- evalExprM e
+    if e' == VBool False then return e' else evalExprM f
+evalExprM (EOr e f) = do
+    e' <- evalExprM e
+    if e' == VBool True then return e' else evalExprM f
 
-evalExprM e             = do
+evalExprM e = do
     liftIO $ putStrLn $ printTree e
     error "evalExprM e"
 
@@ -104,9 +108,6 @@ relOp GE  (VInt a) (VInt b) = VBool $ a >= b
 relOp EQU a        b        = VBool $ a == b
 relOp NE  a        b        = VBool $ a /= b
 
-andOrOp :: (Bool -> Bool -> Bool) -> Val -> Val -> Val
-andOrOp op (VBool a) (VBool b) = VBool $ op a b
-
 ----------------------STMTS----------------------------------------------------
 
 continueM :: IM (Env, Flow)
@@ -122,7 +123,7 @@ execStmtM (SPrint e) = evalExprM e >>= liftIO . print >> continueM
 execStmtM VRet       = liftM2 (,) ask $ return (Just (R VVoid))
 execStmtM (Ret e)    = liftM2 (,) ask $ Just . R <$> evalExprM e
 
-execStmtM (FnDef ret (Ident name) args (Block ss)) = do -- TODO: może wydzielić do funkcji ale nw czy jest sens
+execStmtM (FnDef ret (Ident name) args (Block ss)) = do
     env <- ask
     loc <- alloc
     let env' = M.insert name loc env
@@ -192,9 +193,7 @@ execStmtsM ss = do
   where
     go (possiblyUpdatedEnv, ret) s = case ret of
         Nothing -> local (const possiblyUpdatedEnv) (execStmtM s) -- always run in 'new' env, which is only sometimes changed
-        _       -> do
-            liftIO $ putStrLn "Value's been returned~  "
-            return (possiblyUpdatedEnv, ret)
+        _       -> return (possiblyUpdatedEnv, ret)
 
 runInterpreter (Program prog) = runStateT
     (runReaderT (execStmtsM prog) M.empty)

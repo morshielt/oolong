@@ -10,6 +10,7 @@ import           Control.Monad.Except
 import           AbsOolong
 
 type Var = String
+
 type Loc = Integer
 
 type Env = M.Map Var Loc
