@@ -5,18 +5,19 @@ __Maria Oparka 394632__
 
 
 Interpreter opiera się na połączeniu monad `State`, `Reader` oraz `Except`.
-`Reader` przechowuje mapę: nazwa zmiennej/funkcji -> lokacja.
-`State` przechowuje mapę: lokacja zmiennej -> wartość zmiennej
+- `Reader` przechowuje mapę: nazwa zmiennej/funkcji -> lokacja.
+- `State` przechowuje mapę: lokacja zmiennej -> wartość zmiennej
 oraz liczbę reprezentującą kolejną wolną lokację.
-`Except` odpowiada za komunikaty błędów.
+- `Except` odpowiada za komunikaty błędów.
 
-Moduł statycznego typowania wykorzustuje połączenie monad `Reader` i `Except`.
-`Reader` przechowuje:
-- mapę: nazwa zmiennej/funkcji -> (typ zmiennej/funkcji, numer reprezentujący, w którym scope została zadeklarowana dana zmienna) 
-- aktualny numer scope (stopień zagnieżdżenia)
-- oczekiwany typ zwracany przez aktualnie sprawdzaną funkcję oraz nazwa tej funkcji
-- informacja czy program w danym momencie wykonuje instrukcję znajdującą się w jakiejś pętli
-`Except` odpowiada za komunikaty błędów.
+
+Moduł statycznego typowania wykorzystuje połączenie monad `Reader` i `Except`.
+- `Reader` przechowuje:
+     - mapę: nazwa zmiennej/funkcji -> (typ zmiennej/funkcji, numer reprezentujący, w którym scope została zadeklarowana dana zmienna) 
+     - aktualny numer scope (stopień zagnieżdżenia)
+     - oczekiwany typ zwracany przez aktualnie sprawdzaną funkcję oraz nazwa tej funkcji
+     - informacja czy program w danym momencie wykonuje instrukcję znajdującą się w jakiejś pętli
+- `Except` odpowiada za komunikaty błędów.
 
 
 ## Gramatyka
