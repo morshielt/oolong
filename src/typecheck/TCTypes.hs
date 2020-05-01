@@ -2,8 +2,6 @@ module TCTypes where
 
 import           AbsOolong
 
-import           Types                          ( Var )
-
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Except
 
@@ -15,6 +13,7 @@ import           Data.Map                      as M
 type TCM a = ReaderT TCEnv (ExceptT String IO) a
 
 -- Type checker env
+type Var = String
 type Scope = Integer
 type Types = M.Map Var (TCType, Scope)
 

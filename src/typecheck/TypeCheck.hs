@@ -6,9 +6,6 @@ where
 import           AbsOolong
 import           PrintOolong
 
-import           Types                          ( Var
-                                                , overwriteMap
-                                                )
 import           TCTypes
 import           TCUtils
 
@@ -19,16 +16,17 @@ import           Control.Monad.Except
 import           Data.Map                      as M
                                          hiding ( map )
 
+
 matchType :: [TCType] -> TCType -> TCM ()
-matchType [ex] act = when (ex /= act) $ throwTCM $ unwords
-    ["Expected type:", show ex, "\nActual type:", show act]
-matchType exs act = when (act `notElem` exs) $ throwTCM $ unwords
+matchType [ex] act = when (ex /= act)
+    $ throwMsg ["Expected type:", show ex, "\nActual type:", show act]
+matchType exs act = when (act `notElem` exs) $ throwMsg
     ["Expected one of types:", show' exs, "\nActual type:", show act]
 
 matchExpType :: TCType -> Expr -> TCM TCType
 matchExpType ex e = do
     act <- checkExprM e
-    when (ex /= act) $ throwTCM $ unwords
+    when (ex /= act) $ throwMsg
         [ "Expected type:"
         , show ex
         , "\nActual type:"
@@ -39,11 +37,8 @@ matchExpType ex e = do
     return act
 
 checkBinOp :: [TCType] -> Expr -> Expr -> Expr -> TCM TCType
-checkBinOp ts e1 e2 expr = catchError (matchBinOpTypes ts e1 e2) throwWithTree
+checkBinOp ts e1 e2 expr = matchBinOpTypes ts e1 e2 `throwExtraMsg` msg
   where
-    throwWithTree :: String -> TCM a
-    throwWithTree err = throwTCM $ unwords [err, "\nIn:", printTree expr]
-
     matchBinOpTypes :: [TCType] -> Expr -> Expr -> TCM TCType
     matchBinOpTypes ts e1 e2 = do
         e1T <- checkExprM e1
@@ -51,23 +46,22 @@ checkBinOp ts e1 e2 expr = catchError (matchBinOpTypes ts e1 e2) throwWithTree
         matchType [e1T] =<< checkExprM e2
         return e1T
 
+    msg err = [err, "\nIn:", printTree expr]
+
+
 checkExprM :: Expr -> TCM TCType
 checkExprM expr@(ELambda args ret bs@(Block ss)) = do
     let ret' = typeToTCType ret
 
-    argsTypes <- catchError
-        (handleArgs args)
-        (\e -> throwTCM
-            $ unwords [e, "\nin lambda expression:\n", printTree expr]
-        )
-
-    env <- ask
-    let envWithArgs = env { types       = overwriteMap (types env) argsTypes
+    argsTypes <- handleArgs args `throwExtraMsg` msg
+    env       <- ask
+    let envWithArgs = env { types       = M.union argsTypes (types env)
                           , expectedRet = Just (ret', "lambda expression")
                           }
 
     local (const envWithArgs) $ checkStmtM (BStmt bs)
     return $ TFun (map argToTCArg args) ret'
+    where msg e = [e, "\nin lambda expression:\n", printTree expr]
 
 checkExprM (ELitInt _)          = return TInt
 checkExprM ELitTrue             = return TBool
@@ -93,17 +87,13 @@ checkExprM (     EVar (Ident var)   ) = getVarType var
 checkExprM expr@(EApp (Ident var) es) = do
     typeScope <- getVarTypeScope var
     case typeScope of
-        Nothing -> throwTCM $ unwords ["function ", var, " is not declared"]
+        Nothing -> throwMsg ["function ", var, " is not declared"]
         (Just (TFun args ret, s)) -> do
-            catchError
-                (checkArgs args es)
-                (\e ->
-                    throwTCM $ unwords
-                        [var, ":", e, "\nin function call:", printTree expr]
-                )
+            checkArgs args es `throwExtraMsg` msg
             return ret
-        (Just _) -> throwTCM $ unwords [var, " is not a function"]
+        (Just _) -> throwMsg [var, " is not a function"]
   where
+    msg e = [var, ":", e, "\nin function call:", printTree expr]
     checkArgs :: [TCArg] -> [Expr] -> TCM ()
     checkArgs args es = if length args == length es
         then mapM_ checkArg $ zip args es
@@ -124,7 +114,7 @@ checkStmtM (SExp e) = do
 
 checkStmtM stmt@(SPrint e) = do
     t <- checkExprM e
-    when (t `notElem` [TString, TInt, TBool]) $ throwTCM $ unwords
+    when (t `notElem` [TString, TInt, TBool]) $ throwMsg
         ["Cannot print type ", show t, "in statement:\n", printTree stmt]
     ask
 
@@ -145,9 +135,8 @@ checkStmtM (Decl t ds) = do
     handleDecl t d = do
         var <- case d of
             (DefaultInit (Ident var)) -> case t of
-                (TFun _ _) ->
-                    throwTCM $ unwords
-                        [var, ": Default function declaration is forbidden"]
+                (TFun _ _) -> throwMsg
+                    [var, ": Default function declaration is forbidden"]
                 _ -> return var
             (Init (Ident var) e) -> matchExpType t e >> return var
         checkIfNameAlreadyInScope var
@@ -161,26 +150,23 @@ checkStmtM stmt@(Incr (Ident var)) = checkIncrDecr var stmt
 checkStmtM stmt@(Decr (Ident var)) = checkIncrDecr var stmt
 
 checkStmtM stmt@(While e s       ) = do
-    catchError (matchExpType TBool e)
-               (\e -> throwTCM $ unwords [e, "\nin loop:", printTree stmt])
+    matchExpType TBool e `throwExtraMsg` msg
     local (\env -> env { inLoop = True }) (checkStmtM s)
     ask
+    where msg e = [e, "\nin loop:", printTree stmt]
 
 checkStmtM stmt@(Cond e s) = do
-    catchError
-        (matchExpType TBool e)
-        (\e -> throwTCM $ unwords [e, "\nin if statement:", printTree stmt])
+    matchExpType TBool e `throwExtraMsg` msg
     checkStmtM s
     ask
+    where msg e = [e, "\nin if statement:", printTree stmt]
 
 checkStmtM stmt@(CondElse e s1 s2) = do
-    catchError
-        (matchExpType TBool e)
-        (\e -> throwTCM $ unwords [e, "\nin if/else statement:", printTree stmt]
-        )
+    matchExpType TBool e `throwExtraMsg` msg
     checkStmtM s1
     checkStmtM s2
     ask
+    where msg e = [e, "\nin if/else statement:", printTree stmt]
 
 checkStmtM (BStmt (Block ss)) = do
     env <- ask
@@ -200,17 +186,14 @@ checkStmtM stmt@(FnDef ret (Ident name) args bs@(Block ss)) = do
     let t    = TFun (map argToTCArg args) ret'
     let fEnv = env { types = M.insert name (t, scope) (types env) }
 
-    argsTypes <- catchError
-        (handleArgs args)
-        (\e -> throwTCM $ unwords
-            [name, ": ", e, "\nin function definition:\n", printTree stmt]
-        )
-
-    let fEnvWithArgs = fEnv { types       = overwriteMap (types fEnv) argsTypes
+    argsTypes <- handleArgs args `throwExtraMsg` msg
+    let fEnvWithArgs = fEnv { types       = M.union argsTypes (types fEnv)
                             , expectedRet = Just (ret', name)
                             }
     local (const fEnvWithArgs) $ checkStmtM (BStmt bs)
     return fEnv
+  where
+    msg e = [name, ": ", e, "\nin function definition:\n", printTree stmt]
 
 checkStmtM Break = do
     loop <- asks inLoop
@@ -224,20 +207,18 @@ checkStmtM Continue = do
 checkIncrDecr :: Var -> Stmt -> TCM TCEnv
 checkIncrDecr var stmt = do
     t <- getVarType var
-    catchError
-        (matchType [TInt] t)
-        (\err -> throwTCM $ unwords [err, "in statement:", printTree stmt])
+    matchType [TInt] t `throwExtraMsg` msg
     ask
+    where msg e = [e, "in statement:", printTree stmt]
 
 matchReturn :: TCType -> TCM TCEnv
 matchReturn t = do
     ex <- asks expectedRet
     case ex of
         Nothing           -> throwTCM "Return outside of function"
-        (Just (eT, name)) -> catchError
-            (matchType [eT] t)
-            (\err -> throwTCM $ unwords [name, ":", err, "in function return"])
+        (Just (eT, name)) -> matchType [eT] t `throwExtraMsg` msg name
     ask
+    where msg name e = [name, ":", e, "in function return"]
 
 handleArgs :: [Arg] -> TCM Types
 handleArgs args = do
@@ -253,8 +234,6 @@ handleArgs args = do
         then return mapList
         else throwTCM "Function arguments must have different names"
 
-
-
 checkStmtsM :: [Stmt] -> TCM TCEnv
 checkStmtsM ss = do
     env <- ask
@@ -269,7 +248,7 @@ checkReturns = mapM_ checkReturn
     checkExprReturn :: Expr -> TCM ()
     checkExprReturn e@(ELambda _ _ b) = do
         res <- checkReturn (BStmt b)
-        unless res $ throwTCM $ unwords
+        unless res $ throwMsg
             ["Missing return value in lambda expression:\n", printTree e]
     checkExprReturn (EApp _ es) = mapM_ checkExprReturn es
     checkExprReturn _           = return ()
@@ -282,9 +261,8 @@ checkReturns = mapM_ checkReturn
         res <- checkReturn (BStmt b)
         if res
             then return False
-            else
-                throwTCM $ unwords
-                    ["Missing return value in function:\n", printTree fndef]
+            else throwMsg
+                ["Missing return value in function:\n", printTree fndef]
     checkReturn (SExp e) = do
         checkExprReturn e
         return False

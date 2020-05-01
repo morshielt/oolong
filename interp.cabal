@@ -11,14 +11,13 @@ cabal-version:       >=1.10
 extra-source-files:  README.md
 
 executable interp
-  hs-source-dirs:      src src/parser src/interp
+  hs-source-dirs:      src src/parser src/interpret src/typecheck
   other-modules:
     AbsOolong
     ErrM
     LexOolong
     ParOolong
     PrintOolong
-    SkelOolong
     Types
     TCTypes
     TCUtils

@@ -4,7 +4,20 @@ __Maria Oparka 394632__
 *oolong* to imperatywny język oparty o składnię języka *Latte*.
 
 
-`ghc Main -iparser:interp -o interpreter`
+Interpreter opiera się na połączeniu monad `State`, `Reader` oraz `Except`.
+`Reader` przechowuje mapę: nazwa zmiennej/funkcji -> lokacja.
+`State` przechowuje mapę: lokacja zmiennej -> wartość zmiennej
+oraz liczbę reprezentującą kolejną wolną lokację.
+`Except` odpowiada za komunikaty błędów.
+
+Moduł statycznego typowania wykorzustuje połączenie monad `Reader` i `Except`.
+`Reader` przechowuje:
+- mapę: nazwa zmiennej/funkcji -> (typ zmiennej/funkcji, numer reprezentujący, w którym scope została zadeklarowana dana zmienna) 
+- aktualny numer scope (stopień zagnieżdżenia)
+- oczekiwany typ zwracany przez aktualnie sprawdzaną funkcję oraz nazwa tej funkcji
+- informacja czy program w danym momencie wykonuje instrukcję znajdującą się w jakiejś pętli
+`Except` odpowiada za komunikaty błędów.
+
 
 ## Gramatyka
 Gramatyka to nieco zmodyfikowana gramatyka języka *Latte*.
@@ -32,7 +45,7 @@ BStmt.     Stmt ::= Block ;
 
 Decl.      Stmt ::= Type [Item] ";" ;
 
-DefaultInit.    Item ::= Ident ; -- FUNCTIONS DON'T HAVE DEFAULT, NOT ALLOWED
+DefaultInit.    Item ::= Ident ;
 
 Init.      Item ::= Ident "=" Expr ;
 
@@ -58,7 +71,7 @@ Break.      Stmt ::= "break" ";" ;
 
 Continue.      Stmt ::= "continue" ";" ;
 
-Print.      Stmt ::= "print" "(" Expr ")" ";" ; -- ONLY Expr OF TYPE INT, BOOL AND STRING
+SPrint.      Stmt ::= "print" "(" Expr ")" ";" ;
 
 SExp.      Stmt ::= Expr  ";" ;
 
@@ -66,7 +79,7 @@ FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ;
 
 Arg. 	   Arg ::= Type Ident;
 
-RefArg.	   Arg ::= Type "&" Ident; -- IN FUNCTION DEFINITIONS ONLY (calls must provide a variable, not a primitive)
+RefArg.	   Arg ::= Type "&" Ident;
 
 separator  Arg "," ;
 
@@ -80,9 +93,13 @@ Bool.      Type ::= "bool" ;
 
 Void.      Type ::= "void" ;
 
-Fun.       Type ::= "<""(" [Type] ")" ":" Type ">";
+Fun.       Type ::= "<""(" [ByValOrRef] ")" ":" Type ">";
 
-separator  Type "," ;
+ByVal.  ByValOrRef ::= Type ;
+
+ByRef.  ByValOrRef ::=  Type "&" ;
+
+separator      ByValOrRef "," ;
 
 -- Expressions ---------------------------------------------
 

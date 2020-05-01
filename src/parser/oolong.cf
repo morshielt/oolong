@@ -1,77 +1,70 @@
---Najprościej chyba dodać
---export PATH := $(PATH):/home/students/inf/PUBLIC/MRJP/Stack
---na początku Makefile.
-
 -- programs ------------------------------------------------
 
 entrypoints Program ;
 
-Program.   Program ::= [Stmt] ;    
+Program.   Program ::= [Stmt] ;
 
 -- statements ----------------------------------------------
 
-Block.     Block ::= "{" [Stmt] "}" ;    --DONE
+Block.     Block ::= "{" [Stmt] "}" ;
 
 separator  Stmt "" ;
 
-Empty.     Stmt ::= ";" ;    --DONE
+Empty.     Stmt ::= ";" ;
 
-BStmt.     Stmt ::= Block ;    --DONE
+BStmt.     Stmt ::= Block ;
 
-Decl.      Stmt ::= Type [Item] ";" ; --DONE
+Decl.      Stmt ::= Type [Item] ";" ;
 
-DefaultInit.    Item ::= Ident ; --DONE
+DefaultInit.    Item ::= Ident ;
 
-Init.      Item ::= Ident "=" Expr ; --DONE
+Init.      Item ::= Ident "=" Expr ;
 
 separator nonempty Item "," ;
 
-Ass.       Stmt ::= Ident "=" Expr  ";" ;    --DONE
+Ass.       Stmt ::= Ident "=" Expr  ";" ;
 
-Incr.      Stmt ::= Ident "++"  ";" ;  --DONE
+Incr.      Stmt ::= Ident "++"  ";" ;
 
-Decr.      Stmt ::= Ident "--"  ";" ;  --DONE
+Decr.      Stmt ::= Ident "--"  ";" ;
 
-Ret.       Stmt ::= "return" Expr ";" ;    --DONE
+Ret.       Stmt ::= "return" Expr ";" ;
 
-VRet.      Stmt ::= "return" ";" ;    --DONE
+VRet.      Stmt ::= "return" ";" ;
 
-Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ;    --DONE
+Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ;
 
-CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ;    --DONE
+CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ;
 
-While.     Stmt ::= "while" "(" Expr ")" Stmt ;     --DONE
+While.     Stmt ::= "while" "(" Expr ")" Stmt ;
 
-Break.      Stmt ::= "break" ";" ; -- TODO
+Break.      Stmt ::= "break" ";" ;
 
-Continue.      Stmt ::= "continue" ";" ; -- TODO
+Continue.      Stmt ::= "continue" ";" ;
 
-SPrint.      Stmt ::= "print" "(" Expr ")" ";" ; --DONE -- ONLY Expr OF TYPE INT, BOOL AND STRING     kinda chyba? 
--- zrobienie 1arg funkcji o nazwie print jest głupie XD nigdy jej nie wywoła
+SPrint.      Stmt ::= "print" "(" Expr ")" ";" ;
 
-SExp.      Stmt ::= Expr  ";" ; --DONE
+SExp.      Stmt ::= Expr  ";" ;
 
-FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ;  --DONE -- ZMIENIA ENV GNIDA JEDNA   
+FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ;
 
-Arg. 	   Arg ::= Type Ident;    --DONE
+Arg. 	   Arg ::= Type Ident;
 
-RefArg.	   Arg ::= Type "&" Ident;   --DONE  -- IN FUNCTION DEFINITIONS ONLY (calls must provide a variable, not a primitive)
+RefArg.	   Arg ::= Type "&" Ident;
 
 separator  Arg "," ;
 
 -- Types ---------------------------------------------------
 
-Int.       Type ::= "int" ;   
+Int.       Type ::= "int" ;
 
-Str.       Type ::= "string" ;   
+Str.       Type ::= "string" ;
 
-Bool.      Type ::= "bool" ;   
+Bool.      Type ::= "bool" ;
 
-Void.      Type ::= "void" ;   
+Void.      Type ::= "void" ;
 
-Fun.       Type ::= "<""(" [ByValOrRef] ")" ":" Type ">";   
-
---separator  Type "," ;
+Fun.       Type ::= "<""(" [ByValOrRef] ")" ":" Type ">";
 
 ByVal.  ByValOrRef ::= Type ;
 
@@ -81,33 +74,33 @@ separator      ByValOrRef "," ;
 
 -- Expressions ---------------------------------------------
 
-ELambda.   Expr6 ::= "(" [Arg] ")" ":" Type "->" Block ;   
+ELambda.   Expr6 ::= "(" [Arg] ")" ":" Type "->" Block ;
 
-EVar.      Expr6 ::= Ident ; --DONE
+EVar.      Expr6 ::= Ident ;
 
-ELitInt.   Expr6 ::= Integer ;   --DONE
+ELitInt.   Expr6 ::= Integer ;
 
-ELitTrue.  Expr6 ::= "true" ; --DONE
+ELitTrue.  Expr6 ::= "true" ;
 
-ELitFalse. Expr6 ::= "false" ; --DONE
+ELitFalse. Expr6 ::= "false" ;
 
-EApp.      Expr6 ::= Ident "(" [Expr] ")" ; --DONE   --FIXME: change VFun type and redo
+EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
 
-EString.   Expr6 ::= String ;   --DONE
+EString.   Expr6 ::= String ;
 
-Neg.       Expr5 ::= "-" Expr6 ;   --DONE
+Neg.       Expr5 ::= "-" Expr6 ;
 
-Not.       Expr5 ::= "!" Expr6 ;    --DONE
+Not.       Expr5 ::= "!" Expr6 ;
 
-EMul.      Expr4 ::= Expr4 MulOp Expr5 ;   --DONE
+EMul.      Expr4 ::= Expr4 MulOp Expr5 ;
 
-EAdd.      Expr3 ::= Expr3 AddOp Expr4 ;   --DONE
+EAdd.      Expr3 ::= Expr3 AddOp Expr4 ;
 
-ERel.      Expr2 ::= Expr2 RelOp Expr3 ; --DONE
+ERel.      Expr2 ::= Expr2 RelOp Expr3 ;
 
-EAnd.      Expr1 ::= Expr2 "&&" Expr1 ; --DONE
+EAnd.      Expr1 ::= Expr2 "&&" Expr1 ;
 
-EOr.       Expr ::= Expr1 "||" Expr ; --DONE
+EOr.       Expr ::= Expr1 "||" Expr ;
 
 coercions  Expr 6 ;
 

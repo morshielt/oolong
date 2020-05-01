@@ -1,0 +1,12 @@
+// it's impossible to declare function named `print` (with any number of arguments)
+// as it's already a special statement
+
+int print(int i, string s) {
+    while (i > 0) {
+        print(s);
+        i--;
+    }
+    return i;
+}
+
+print(5, "different print");

@@ -17,9 +17,6 @@ type Var = String
 type Loc = Integer
 type Env = M.Map Var Loc
 
-overwriteMap :: Ord a => M.Map a b -> M.Map a b -> M.Map a b
-overwriteMap = M.unionWith (curry snd)
-
 -- Store
 type Store = M.Map Loc Val
 data IMState = IMState

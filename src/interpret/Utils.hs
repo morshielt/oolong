@@ -8,9 +8,6 @@ import           Control.Monad.Trans.Except
 import           Data.Map                      as M
 import           Types
 
-throwM :: String -> IM a
-throwM = lift . lift . throwE
-
 alloc :: IM Loc
 alloc = do
     modify (\st -> st { freeLoc = freeLoc st + 1 })
@@ -60,3 +57,6 @@ declare var val = do
     loc <- alloc
     putVal loc val
     setLoc var loc
+
+throwM :: String -> IM a
+throwM = lift . lift . throwE

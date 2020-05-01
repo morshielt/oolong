@@ -3,18 +3,15 @@ module TCUtils where
 
 import           AbsOolong
 
-import           Types                          ( Var )
 import           TCTypes
 
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Except
+import           Control.Monad.Except
 
 import           Data.List                      ( intercalate )
 import           Data.Map                      as M
                                          hiding ( map )
-
-throwTCM :: String -> TCM a
-throwTCM = lift . throwE
 
 getVarType :: Var -> TCM TCType
 getVarType var = do
@@ -41,3 +38,12 @@ checkIfNameAlreadyInScope var = do
                 $  "Variable "
                 ++ var
                 ++ " already declared"
+
+throwTCM :: String -> TCM a
+throwTCM = lift . throwE
+
+throwExtraMsg :: TCM a -> (String -> [String]) -> TCM a
+throwExtraMsg act msg = catchError act (throwTCM . unwords . msg)
+
+throwMsg :: [String] -> TCM a
+throwMsg = throwTCM . unwords

@@ -1,4 +1,3 @@
--- {-# LANGUAGE FlexibleContexts #-}
 module Interpreter
     ( runInterpreter
     )
@@ -17,8 +16,6 @@ import           Control.Monad.Reader
 import           Control.Monad.State
 import           Control.Monad.Trans.Except
 
--- TODO: showS errors???
-
 ------------------EXPR---------------------------------------------------------
 
 evalExprM :: Expr -> IM Val
@@ -30,7 +27,7 @@ evalExprM (ELambda args ret (Block ss)) = do
 
 evalExprM (EApp (Ident name) es) = do
     (VFun args _ env ss) <- readVar name
-    env'                 <- overwriteMap env <$> applyArgs args es
+    env'                 <- flip M.union env <$> applyArgs args es
     (_, Just (R val))    <- local (const env') (execStmtsM ss)
     return val
   where
