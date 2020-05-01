@@ -11,11 +11,14 @@ import           TCUtils
 
 import           Control.Monad                  ( when )
 import           Control.Monad.Reader
-import           Control.Monad.Except
 
-import           Data.Map                      as M
-                                         hiding ( map )
+import           Data.Map                       ( union
+                                                , insert
+                                                , fromList
+                                                , empty
+                                                )
 
+------------------EXPR---------------------------------------------------------
 
 matchType :: [TCType] -> TCType -> TCM ()
 matchType [ex] act = when (ex /= act)
@@ -48,14 +51,13 @@ checkBinOp ts e1 e2 expr = matchBinOpTypes ts e1 e2 `throwExtraMsg` msg
 
     msg err = [err, "\nIn:", printTree expr]
 
-
 checkExprM :: Expr -> TCM TCType
 checkExprM expr@(ELambda args ret bs@(Block ss)) = do
     let ret' = typeToTCType ret
 
     argsTypes <- handleArgs args `throwExtraMsg` msg
     env       <- ask
-    let envWithArgs = env { types       = M.union argsTypes (types env)
+    let envWithArgs = env { types       = argsTypes `union` types env
                           , expectedRet = Just (ret', "lambda expression")
                           }
 
@@ -103,7 +105,7 @@ checkExprM expr@(EApp (Ident var) es) = do
         checkArg (R t, _) = throwTCM "Reference argument must be a variable"
         checkArg (V t, e) = matchExpType t e
 
-
+----------------------STMTS----------------------------------------------------
 
 checkStmtM :: Stmt -> TCM TCEnv
 checkStmtM Empty    = ask
@@ -143,7 +145,7 @@ checkStmtM (Decl t ds) = do
 
         scope <- asks scope
         env   <- ask
-        let envWithDecl = M.insert var (t, scope) (types env)
+        let envWithDecl = insert var (t, scope) (types env)
         return $ env { types = envWithDecl }
 
 checkStmtM stmt@(Incr (Ident var)) = checkIncrDecr var stmt
@@ -184,10 +186,10 @@ checkStmtM stmt@(FnDef ret (Ident name) args bs@(Block ss)) = do
     scope <- asks scope
     env   <- ask
     let t    = TFun (map argToTCArg args) ret'
-    let fEnv = env { types = M.insert name (t, scope) (types env) }
+    let fEnv = env { types = insert name (t, scope) (types env) }
 
     argsTypes <- handleArgs args `throwExtraMsg` msg
-    let fEnvWithArgs = fEnv { types       = M.union argsTypes (types fEnv)
+    let fEnvWithArgs = fEnv { types       = argsTypes `union` types fEnv
                             , expectedRet = Just (ret', name)
                             }
     local (const fEnvWithArgs) $ checkStmtM (BStmt bs)
@@ -229,7 +231,7 @@ handleArgs args = do
                 (RefArg t (Ident var)) -> (var, (typeToTCType t, scope + 1))
             )
             args
-    let mapList = M.fromList list
+    let mapList = fromList list
     if length list == length mapList
         then return mapList
         else throwTCM "Function arguments must have different names"
@@ -241,6 +243,10 @@ checkStmtsM ss = do
   where
     go :: TCEnv -> Stmt -> TCM TCEnv
     go env' s = local (const env') $ checkStmtM s
+
+----------------------RETURNS--------------------------------------------------
+-- check if every branch of every function has a return
+-- returns in while statements doesn't count
 
 checkReturns :: [Stmt] -> TCM ()
 checkReturns = mapM_ checkReturn
@@ -280,7 +286,7 @@ checkReturns = mapM_ checkReturn
     checkReturn _ = return False
 
 runTypeChecker (Program prog) = runReaderT (go prog)
-    $ TCEnv M.empty 0 Nothing False
+    $ TCEnv empty 0 Nothing False
   where
     go prog = do
         checkStmtsM prog

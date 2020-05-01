@@ -1,0 +1,22 @@
+// function declaration behaves just like syntactic sugar to declaring
+// function variable using a lambda expression, therefore it's 
+// possible to replace the function with 'value' (function) 
+// of appropriate type
+
+int g() {
+    int g () {
+        return 5;
+    }
+    return g();
+}
+
+print(g());
+
+int h() {
+    return 6;
+}
+
+g = h;
+
+print(g());
+

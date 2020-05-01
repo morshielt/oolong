@@ -1,4 +1,4 @@
-// not allowed - `is_even` doesn't know about `is_odd`
+// mutual recursion is not allowed - `is_even` doesn't know about `is_odd`
 
 bool is_even(int n) {
     if (n == 0)

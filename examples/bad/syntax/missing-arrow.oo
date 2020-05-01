@@ -1,0 +1,8 @@
+<(int) : int> oneOrTwo = 
+//    (int i) : int -> { 
+    (int i) : int { 
+        if (i == 1)
+            return 1; 
+        else
+            return 2;
+    };

@@ -1,0 +1,4 @@
+// bool checkCondition(<(int):bool> cond, int x) {
+bool checkCondition(<(int)> cond, int x) {
+    return cond(x);
+}

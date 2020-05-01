@@ -4,17 +4,20 @@ module Interpreter
 where
 
 import           AbsOolong
-import           PrintOolong
 
 import           Types
 import           Utils
 
-import           Data.Map                      as M
-                                         hiding ( map )
-
+import           Data.Map                       ( union
+                                                , fromList
+                                                , insert
+                                                , empty
+                                                )
 import           Control.Monad.Reader
 import           Control.Monad.State
-import           Control.Monad.Trans.Except
+
+-- Type checker ensures everything is valid, so pattern matching 
+-- of expressions and statements in execution phase is sufficient
 
 ------------------EXPR---------------------------------------------------------
 
@@ -27,12 +30,12 @@ evalExprM (ELambda args ret (Block ss)) = do
 
 evalExprM (EApp (Ident name) es) = do
     (VFun args _ env ss) <- readVar name
-    env'                 <- flip M.union env <$> applyArgs args es
+    env'                 <- flip union env <$> applyArgs args es
     (_, Just (R val))    <- local (const env') (execStmtsM ss)
     return val
   where
     applyArgs :: [Arg] -> [Expr] -> IM Env
-    applyArgs args es = M.fromList <$> zipWithM matchArgExpr args es
+    applyArgs args es = fromList <$> zipWithM matchArgExpr args es
       where
         matchArgExpr :: Arg -> Expr -> IM (Var, Loc)
         matchArgExpr (Arg t (Ident var)) e = do
@@ -119,7 +122,7 @@ execStmtM (Ret e)    = liftM2 (,) ask $ Just . R <$> evalExprM e
 execStmtM (FnDef ret (Ident name) args (Block ss)) = do
     env <- ask
     loc <- alloc
-    let env' = M.insert name loc env
+    let env' = insert name loc env
     let val' = VFun args ret env' ss
     putVal loc val'
     return (env', Nothing)
@@ -183,6 +186,6 @@ execStmtsM ss = do
         _       -> return (possiblyUpdatedEnv, ret)
 
 runInterpreter (Program prog) = runStateT
-    (runReaderT (execStmtsM prog) M.empty)
+    (runReaderT (execStmtsM prog) empty)
     initialState
-    where initialState = IMState M.empty 0
+    where initialState = IMState empty 0

@@ -1,11 +1,14 @@
 module Utils where
-
+-- 
 import           Control.Monad.Reader
 import           Control.Monad.State
 import           Control.Monad.Trans.Except
 
 
 import           Data.Map                      as M
+                                                ( lookup
+                                                , insert
+                                                )
 import           Types
 
 alloc :: IM Loc

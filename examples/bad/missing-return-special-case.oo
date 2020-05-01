@@ -5,7 +5,7 @@
 // so that branch might not have a return statement,
 // therefore this program is not valid
 
-int g(int x) {
+int specialCase(int x) {
     if (x > 0) {
         while (x >= 0) {
             x--;

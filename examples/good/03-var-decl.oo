@@ -4,5 +4,5 @@ string s, default_string = "";
 bool b, default_bool = false;
 
 print(i == default_int);
-print(s == default_string); //TODO: EQUALITY for types & STRING CONCAT
+print(s == default_string);
 print(b == default_bool);

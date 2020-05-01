@@ -6,8 +6,7 @@ import           Control.Monad.Reader
 import           Control.Monad.Trans.Except
 
 import           Data.List                      ( intercalate )
-import           Data.Map                      as M
-                                         hiding ( map )
+import           Data.Map                      (Map)
 
 -- Main type check monad
 type TCM a = ReaderT TCEnv (ExceptT String IO) a
@@ -15,7 +14,7 @@ type TCM a = ReaderT TCEnv (ExceptT String IO) a
 -- Type checker env
 type Var = String
 type Scope = Integer
-type Types = M.Map Var (TCType, Scope)
+type Types = Map Var (TCType, Scope)
 
 data TCEnv = TCEnv
   { types :: Types

@@ -1,4 +1,9 @@
 // recursive lambdas are not allowed
 
 <(int) : int> sum = 
-    (int i) : int -> { if (i == 1) return 1; else return i + sum(i-1); };
+    (int i) : int -> { 
+        if (i == 1)
+            return 1; 
+        else
+            return i + sum(i-1);
+    };

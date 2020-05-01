@@ -1,4 +1,5 @@
-// it's impossible to declare function named `print` (with any number of arguments)
+// it's impossible to declare function named `print` 
+// (with any number of arguments)
 // as it's already a special statement
 
 int print(int i, string s) {

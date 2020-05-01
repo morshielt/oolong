@@ -1,7 +1,6 @@
 module Types where
 
-import           Data.Map                      as M
-                                         hiding ( map )
+import           Data.Map                       ( Map )
 
 import           Control.Monad.Reader
 import           Control.Monad.State
@@ -15,10 +14,10 @@ type IM a = ReaderT Env (StateT IMState (ExceptT String IO)) a
 -- Env
 type Var = String
 type Loc = Integer
-type Env = M.Map Var Loc
+type Env = Map Var Loc
 
 -- Store
-type Store = M.Map Loc Val
+type Store = Map Loc Val
 data IMState = IMState
   { locToVal :: Store
   , freeLoc :: Loc

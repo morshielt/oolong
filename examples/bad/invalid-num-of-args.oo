@@ -3,4 +3,4 @@ int mult3 (int y) {
     return y;
 }
 
-print(mult3(3, 4)); // 15
+print(mult3(3, 4));

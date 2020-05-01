@@ -4,4 +4,4 @@ int mult3 (int &y) {
     return y;
 }
 
-print(mult3(5)); // ERROR - argument musi być zmienną, nie typem podstawowym
+print(mult3(5));

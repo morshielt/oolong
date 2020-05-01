@@ -1,0 +1,2 @@
+print("Type check tests are in 'bad/typecheck' directory,");
+print("anyhow, every program is checked.");

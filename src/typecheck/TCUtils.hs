@@ -1,8 +1,5 @@
 module TCUtils where
 
-
-import           AbsOolong
-
 import           TCTypes
 
 import           Control.Monad.Reader
@@ -11,7 +8,7 @@ import           Control.Monad.Except
 
 import           Data.List                      ( intercalate )
 import           Data.Map                      as M
-                                         hiding ( map )
+                                                ( lookup )
 
 getVarType :: Var -> TCM TCType
 getVarType var = do

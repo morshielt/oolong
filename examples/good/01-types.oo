@@ -6,4 +6,3 @@ print(s);
 
 bool b = true;
 print(b);
-
