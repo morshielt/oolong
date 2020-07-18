@@ -1,229 +1,41 @@
-# Deklaracja języka imperatywnego *oolong*
-__Maria Oparka 394632__
-
-*oolong* to imperatywny język oparty o składnię języka *Latte*.
-
-
-Interpreter opiera się na połączeniu monad `State`, `Reader` oraz `Except`.
-- `Reader` przechowuje mapę: nazwa zmiennej/funkcji -> lokacja.
-- `State` przechowuje mapę: lokacja zmiennej -> wartość zmiennej
-oraz liczbę reprezentującą kolejną wolną lokację.
-- `Except` odpowiada za komunikaty błędów.
-
-
-Moduł statycznego typowania wykorzystuje połączenie monad `Reader` i `Except`.
-- `Reader` przechowuje:
-     - mapę: nazwa zmiennej/funkcji -> (typ zmiennej/funkcji, numer reprezentujący, w którym scope została zadeklarowana dana zmienna) 
-     - aktualny numer scope (stopień zagnieżdżenia)
-     - oczekiwany typ zwracany przez aktualnie sprawdzaną funkcję oraz nazwa tej funkcji
-     - informacja czy program w danym momencie wykonuje instrukcję znajdującą się w jakiejś pętli
-- `Except` odpowiada za komunikaty błędów.
-
-
-## Gramatyka
-Gramatyka to nieco zmodyfikowana gramatyka języka *Latte*.
-
-W gramatyce występuje konflikt:
-wyrażenie `if (cond1) f1(); if (cond2) f2(); else g();` jest parsowane tak, że `else` należy do __drugiego__ `if`.
-
-Gramatyka w notacji EBNF:
-```
--- programs ------------------------------------------------
-
-entrypoints Program ;
-
-Program.   Program ::= [Stmt] ;
-
--- statements ----------------------------------------------
-
-Block.     Block ::= "{" [Stmt] "}" ;
-
-separator  Stmt "" ;
-
-Empty.     Stmt ::= ";" ;
-
-BStmt.     Stmt ::= Block ;
-
-Decl.      Stmt ::= Type [Item] ";" ;
-
-DefaultInit.    Item ::= Ident ;
-
-Init.      Item ::= Ident "=" Expr ;
-
-separator nonempty Item "," ;
-
-Ass.       Stmt ::= Ident "=" Expr  ";" ;
-
-Incr.      Stmt ::= Ident "++"  ";" ;
-
-Decr.      Stmt ::= Ident "--"  ";" ;
-
-Ret.       Stmt ::= "return" Expr ";" ;
-
-VRet.      Stmt ::= "return" ";" ;
-
-Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ;
-
-CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ;
-
-While.     Stmt ::= "while" "(" Expr ")" Stmt ;
-
-Break.      Stmt ::= "break" ";" ;
-
-Continue.      Stmt ::= "continue" ";" ;
-
-SPrint.      Stmt ::= "print" "(" Expr ")" ";" ;
-
-SExp.      Stmt ::= Expr  ";" ;
-
-FnDef.	   Stmt ::= Type Ident "(" [Arg] ")" Block ;
-
-Arg. 	   Arg ::= Type Ident;
-
-RefArg.	   Arg ::= Type "&" Ident;
-
-separator  Arg "," ;
-
--- Types ---------------------------------------------------
-
-Int.       Type ::= "int" ;
-
-Str.       Type ::= "string" ;
-
-Bool.      Type ::= "bool" ;
-
-Void.      Type ::= "void" ;
-
-Fun.       Type ::= "<""(" [ByValOrRef] ")" ":" Type ">";
-
-ByVal.  ByValOrRef ::= Type ;
-
-ByRef.  ByValOrRef ::=  Type "&" ;
-
-separator      ByValOrRef "," ;
-
--- Expressions ---------------------------------------------
-
-ELambda.   Expr6 ::= "(" [Arg] ")" ":" Type "->" Block ;
-
-EVar.      Expr6 ::= Ident ;
-
-ELitInt.   Expr6 ::= Integer ;
-
-ELitTrue.  Expr6 ::= "true" ;
-
-ELitFalse. Expr6 ::= "false" ;
-
-EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
-
-EString.   Expr6 ::= String ;
-
-Neg.       Expr5 ::= "-" Expr6 ;
-
-Not.       Expr5 ::= "!" Expr6 ;
-
-EMul.      Expr4 ::= Expr4 MulOp Expr5 ;
-
-EAdd.      Expr3 ::= Expr3 AddOp Expr4 ;
-
-ERel.      Expr2 ::= Expr2 RelOp Expr3 ;
-
-EAnd.      Expr1 ::= Expr2 "&&" Expr1 ;
-
-EOr.       Expr ::= Expr1 "||" Expr ;
-
-coercions  Expr 6 ;
-
-separator  Expr "," ;
-
--- operators -----------------------------------------------
-
-Plus.      AddOp ::= "+" ;
-
-Minus.     AddOp ::= "-" ;
-
-Times.     MulOp ::= "*" ;
-
-Div.       MulOp ::= "/" ;
-
-Mod.       MulOp ::= "%" ;
-
-LTH.       RelOp ::= "<" ;
-
-LE.        RelOp ::= "<=" ;
-
-GTH.       RelOp ::= ">" ;
-
-GE.        RelOp ::= ">=" ;
-
-EQU.       RelOp ::= "==" ;
-
-NE.        RelOp ::= "!=" ;
-
--- comments ------------------------------------------------
-
-comment    "#" ;
-
-comment    "//" ;
-
-comment    "/*" "*/" ;
-
-
-```
-
-
-## Tabela cech języka imperatywnego:
-Na 15 punktów
-- [x]    01 (trzy typy)
-- [x]    02 (literały, arytmetyka, porównania)
-- [x]    03 (zmienne, przypisanie)
-- [x]    04 (print)
-- [x]    05 (while, if)
-- [x]    06 (funkcje lub procedury, rekurencja)
-- [x]    07 (przez zmienną / przez wartość / in/out)
-- [ ]    08 (zmienne read-only i pętla for) 
-     
-Na 20 punktów
-- [x]    09 (przesłanianie i statyczne wiązanie)
-- [x]    10 (obsługa błędów wykonania)
-- [x]    11 (funkcje zwracające wartość)
-
-Na 30 punktów
-- [x]    12 (4) (statyczne typowanie)
-- [x]    13 (2) (funkcje zagnieżdżone ze statycznym wiązaniem)
-- [ ]    14 (1) (rekordy/tablice/listy)
-- [ ]    15 (2) (krotki z przypisaniem)
-- [x]    16 (1) (break, continue)
-- [x]    17 (4) (funkcje wyższego rzędu, anonimowe, domknięcia)
-- [ ]    18 (3) (generatory)
-
-Razem: 20 + (4 + 2 + 1 + 4) = 31 => __max. 30 punktów__
-
-
-## Opis języka
-### Struktura programu
-Program jest listą instrukcji oddzielonych średnikiem.
-
-### Instrukcje
-Instrukcje: pusta, złożona, `if`, `while`, `return`, `break`, `continue` jak w C/Javie. Dodatkowo instrukcjami są przypisanie, definicja funkcji (standardowa składnia jak w C), postinkrementacja, postdekrementacja, wypisanie na standardowe wyjście (instrukcja `print`).
-
-### Typy
-`int`, `bool`, `void`, `string` jak w Javie. Dodatkowo definiuję typ dla funkcji: `<([typ_argumentu]) : typ_zwracany>`
-
-np. `<(int, string) : bool>` to typ funkcji przyjmującej 2 argumenty (typu `int` oraz `string`) i zwracającej wartość typu `bool`
-
-Domyślne wartości typów przy deklaracji bez inicjalizacji zmiennych:
+# *oolong* imperative language interpreter
+Interpreter is based on a `State`, `Reader` and `Except` monads.
+- `Reader` stores map: variable/function name ->  location.
+- `State` stores  map: location -> value and a number representing the next free location.
+- `Except` is responsible for error messages.
+
+Static typing module uses `Reader` and `Except` monads.
+- `Reader` stores:
+     - map: variable/function name -> (type, number representing scope of the declaration) 
+     - current scope index
+     - expected type returned by currently checked function and its name
+     - information whether current instruction is inside a loop
+- `Except` is responsible for error messages.
+
+## Language description
+### Program structure
+Program is a list of instructions separated by semicolons.
+
+### Statements
+Statements: empty, composed, `if`, `while`, `return`, `break`, `continue` (C/Java-like), declaration, assignment, function definition, post-increment, post-decrement, wrirting to stdout (`print`).
+
+### Types
+`int`, `bool`, `void`, `string`, function type: `<([arg_type]) : return_type>`
+
+e.g. `<(int, string) : bool>` is the type of function with 2 arguments (of types `int` and `string`) and returning value of type `bool`
+
+Default types' values when declaring without initializing:
 + `int` => `0`
 + `bool` => `false`
 + `string` => `""`
 
-Deklaracja bez inicjalizacji zmiennej typu funkcyjnego jest __niedozwolona__.
+Declaration without initialization of function type variable is __forbidden__.
 
-### Wyrażenia
-Takie jak w języku *Latte*, a dodatkowo wyrażenia lambda (funkcje anonimowe) o składni:
-`([typ_i_nazwa_argumentu]) : typ_zwracany -> {[instrukcje]}`
+### Expressions
+Mostly C/Java-like, additionally lamda expressions (anonymous functions) with semantics:
+`([arg_type_and_name]) : return_type -> {[statements]}`
 
-np.
+e.g.
 ```
 int x = 5;
 < (int) : int > add2  = (int y) : int -> { return y + 2; };
@@ -231,16 +43,16 @@ int x = 5;
 print(add2(x)); // 7
 ```
 
-### Napisy
-Standardowe, można konkatenować operatorem `+`.
+### Strings
+Standard, can be concatenated by `+`.
 
-### Predefiniowane funkcje
-Funkcja `print` wypisująca wyrażenie podstawowego typu (`int`, `bool`, `string`) (__nie `void` ani funkcje anonimowe__)
+### Predefined functions
+`print` function writing expression of a basic type (`int`, `bool`, `string`) to stdout (__not `void` or anonymous functions__).
 
-### Parametry funkcji (przez wartość/referencję)
-Parametry funkcji można przekazywać przez wartość lub przez referencję.
+### Function parameters
+Function parameters can be passed by value or by reference.
 
-Przez wartość:
+By value:
 ```c
 int x = 5;
 int mult3 (int y) {
@@ -252,10 +64,10 @@ print(mult3(x)); // 15
 print(x); // 5
 ```
 
-Przez referencję (w definicji funkcji, między typem a nazwą argumentu należy napisać znak `&`, jak w C++):
+By reference (in function definition, between the type and the name of the argument there should be an `&`, like in C++):
 ```c
 int x = 5;
-int mult3 (int &y) { // jedyna różnica z przykładem wyżej to '&'
+int mult3 (int &y) { // the only difference with example above is '&'
     y = y * 3;
     return y;
 }
@@ -263,13 +75,10 @@ int mult3 (int &y) { // jedyna różnica z przykładem wyżej to '&'
 print(mult3(x)); // 15
 print(x); // 15
 
-print(mult3(5)); // ERROR - argument musi być zmienną, nie typem podstawowym
+print(mult3(5)); // ERROR - argument has to be a variable, not a basic type
 ```
 
-### Przesłanianie zmiennych / zagnieżdżanie funkcji
-Można przesłaniać zmienne w zagnieżdżonych blokach i zagnieżdżać funkcje.
-
-Przesłanianie:
+### Variable shadowing
 ```c
 int x = 5;
 
@@ -284,7 +93,8 @@ int g(int z) {
 
 print(g(1)); // g(1) = f(1+1) = 5 * 2 = 10
 ```
-Zagnieżdżanie funkcji:
+
+### Function nesting
 ```c
 int x = 5;
 int f(int y) {
@@ -297,8 +107,7 @@ int f(int y) {
 print(f(1)); // f(1) = 5 * (1 + 2) = 15; 
 ```
 
-### Zwracanie funkcji / przekazywanie jako parametr / funkcje anonimowe / domknięcia
-Zwracanie funkcji / domknięcie:
+### Closures
 ```c
 <(int) : int> multByPlus1Function(int multiplier) {
     int m = multiplier + 1;
@@ -311,7 +120,7 @@ Zwracanie funkcji / domknięcie:
 print(multBy5(7)); // 35
 ```
 
-Przekazywanie funkcji jako parametr:
+### Functions as parameters
 ```c
 bool big(int x) {
     if (x > 50) return true;
@@ -326,9 +135,9 @@ print(checkCondition(big, 100)); // true
 print(checkCondition((int x) : bool -> { return x == 5; }, 10 )); // false
 ```
 
-### Błędy wykonania
-Obsługiwane są błędy wykonania, np. dzielenie przez 0.
+### Runtime exceptions
+- Division by 0
 
-### Statyczne typowanie
-Interpreter sprawdza zgodność typów przed wykonaniem programu.
+### Static typing
+Interpreter perfoms a static type check before program execution.
 
